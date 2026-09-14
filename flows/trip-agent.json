@@ -1,0 +1,19 @@
+{
+  "data": {
+    "edges": [],
+    "nodes": [],
+    "viewport": {
+      "x": 0,
+      "y": 0,
+      "zoom": 1
+    }
+  },
+  "description": "Draft blank Langflow flow for the ISYS 650 trip-planning agent.",
+  "endpoint_name": null,
+  "id": "3ab6e124-5bcd-40ef-8a4b-a983b316f697",
+  "is_component": false,
+  "last_tested_version": "1.12.1",
+  "locked": false,
+  "name": "Trip Planning Agent — Draft",
+  "tags": []
+}

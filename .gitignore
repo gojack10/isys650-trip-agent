@@ -1,0 +1,31 @@
+# Local environment and secrets
+.env*
+**/credentials/**
+**/*credentials*
+**/*secret*
+**/*token*
+**/*.key
+**/*.pem
+
+# Codex authentication and caches
+.codex/
+.codex-auth/
+**/.codex/
+**/.codex-auth/
+.codex-cache/
+
+# Local data, uploads, state, and logs
+*.db
+*.sqlite
+*.sqlite3
+uploads/
+**/uploads/
+state/
+**/state/
+*.log
+
+# Temporary export locations (ordinary JSON remains trackable)
+tmp/
+temp/
+exports/
+**/exports/
