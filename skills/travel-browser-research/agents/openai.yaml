@@ -1,0 +1,4 @@
+interface:
+  display_name: "Travel Browser Research"
+  short_description: "Research source-backed itinerary options"
+  default_prompt: "Use $travel-browser-research to research the known trip and return verified itinerary data with prices and sources."

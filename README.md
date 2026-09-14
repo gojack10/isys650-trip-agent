@@ -12,4 +12,10 @@ The draft targets the course assignment over the next few weeks by demonstrating
 
 `flows/trip-agent.json` is the JSON export of that new Langflow flow. It is kept in Git so the team can review project history and import/export the flow through Langflow; the Langflow server is the runtime, not a substitute for this repository.
 
-Team roles, `AGENTS.md`, the repository skill, and CI are intentionally not set up yet. They will be ideated separately.
+Team roles, `AGENTS.md`, and CI are intentionally not set up yet. They will be ideated separately.
+
+## Travel research skill
+
+`skills/travel-browser-research/` contains the first data-and-tooling checkpoint: a Browser Harness workflow for researching an already-defined trip. It discovers candidates, verifies prices and restrictions on primary sources, and returns structured, source-backed data for the itinerary agent.
+
+The skill is a research workflow and is not yet wired into the blank Langflow export. It does not book travel, enter credentials, or guarantee changing prices and availability.
