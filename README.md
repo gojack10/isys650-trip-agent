@@ -8,14 +8,18 @@ The draft targets the course assignment over the next few weeks by demonstrating
 
 ## Current status
 
-**Draft setup only.** A separate Langflow project (`trip-planning-agent`) and flow (`Trip Planning Agent — Draft`) were created. The flow is intentionally blank; implementation and validation are deferred.
+**Draft setup and role research.** A separate Langflow project (`trip-planning-agent`) and flow (`Trip Planning Agent — Draft`) were created. The flow is intentionally blank; implementation and validation are deferred.
 
 `flows/trip-agent.json` is the JSON export of that new Langflow flow. It is kept in Git so the team can review project history and import/export the flow through Langflow; the Langflow server is the runtime, not a substitute for this repository.
 
-Team roles, `AGENTS.md`, and CI are intentionally not set up yet. They will be ideated separately.
+## Prompting skill
+
+Zack's first prompting checkpoint is documented in [`docs/prompting-checkpoint.md`](docs/prompting-checkpoint.md). Its reusable behavior is encoded in [`skills/plan-multi-city-trip/`](skills/plan-multi-city-trip/). The skill maintains evolving constraints, checks route feasibility, synthesizes timed itineraries, builds complete budgets and savings goals, and includes reservation and safety guidance.
 
 ## Travel research skill
 
 `skills/travel-browser-research/` contains the first data-and-tooling checkpoint: a Browser Harness workflow for researching an already-defined trip. It discovers candidates, verifies prices and restrictions on primary sources, and returns structured, source-backed data for the itinerary agent.
 
 The skill is a research workflow and is not yet wired into the blank Langflow export. It does not book travel, enter credentials, or guarantee changing prices and availability.
+
+`AGENTS.md`, CI, and the executable Langflow implementation are intentionally not set up yet. They will be ideated separately.
