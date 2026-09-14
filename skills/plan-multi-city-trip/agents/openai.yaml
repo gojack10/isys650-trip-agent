@@ -1,0 +1,4 @@
+interface:
+  display_name: "Multi-City Trip Planner"
+  short_description: "Build evidence-based multi-city trip plans"
+  default_prompt: "Use $plan-multi-city-trip to create a timed, budgeted, safety-aware itinerary for my trip."
