@@ -1,0 +1,1065 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Wanderplan trip calendar wireframe">
+  <title>Wanderplan — Trip Calendar</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #20251f;
+      --muted: #6d756c;
+      --canvas: #f4f2ec;
+      --paper: #fffdf8;
+      --line: #deddd5;
+      --green: #173f35;
+      --green-soft: #dce9e3;
+      --rome: #db6c5a;
+      --rome-soft: #f8ddd7;
+      --florence: #d99a27;
+      --florence-soft: #f7e7c5;
+      --barcelona: #357ba6;
+      --barcelona-soft: #d8eaf3;
+      --lisbon: #8565a3;
+      --lisbon-soft: #e9def2;
+      --shadow: 0 18px 45px rgba(35, 45, 38, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      background: var(--canvas);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    button, select { font: inherit; }
+    button { color: inherit; }
+
+    .app-shell {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 220px minmax(0, 1fr);
+    }
+
+    .sidebar {
+      background: var(--green);
+      color: #f6f4ed;
+      padding: 28px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 23px;
+      letter-spacing: -0.4px;
+    }
+
+    .brand-mark {
+      width: 34px;
+      height: 34px;
+      border-radius: 50% 50% 45% 55%;
+      display: grid;
+      place-items: center;
+      background: #f1c96f;
+      color: var(--green);
+      transform: rotate(-8deg);
+      font-family: ui-sans-serif, sans-serif;
+      font-weight: 800;
+    }
+
+    .nav-list { display: grid; gap: 7px; }
+
+    .nav-item {
+      width: 100%;
+      min-height: 43px;
+      padding: 0 13px;
+      border: 0;
+      border-radius: 10px;
+      background: transparent;
+      color: rgba(255,255,255,.7);
+      text-align: left;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 11px;
+    }
+
+    .nav-item:hover { background: rgba(255,255,255,.08); color: #fff; }
+    .nav-item.active { background: rgba(255,255,255,.14); color: #fff; font-weight: 650; }
+    .nav-icon { width: 19px; text-align: center; }
+
+    .sidebar-note {
+      margin-top: auto;
+      padding: 16px;
+      border-radius: 14px;
+      background: rgba(255,255,255,.09);
+      color: rgba(255,255,255,.78);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .sidebar-note strong { color: #fff; display: block; margin-bottom: 5px; }
+
+    main { min-width: 0; padding: 28px 30px 34px; }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 24px;
+    }
+
+    .trip-heading h1 {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(28px, 3vw, 40px);
+      line-height: 1.05;
+      letter-spacing: -1px;
+      font-weight: 500;
+    }
+
+    .trip-heading p { margin: 8px 0 0; color: var(--muted); font-size: 14px; }
+
+    .top-actions { display: flex; align-items: center; gap: 10px; }
+
+    .button {
+      min-height: 42px;
+      border: 1px solid var(--line);
+      background: var(--paper);
+      border-radius: 10px;
+      padding: 0 15px;
+      cursor: pointer;
+      font-weight: 650;
+      box-shadow: 0 2px 4px rgba(30,40,32,.03);
+    }
+
+    .button:hover { border-color: #b9beb8; transform: translateY(-1px); }
+    .button.primary { background: var(--green); color: #fff; border-color: var(--green); }
+    .icon-button { width: 40px; padding: 0; font-size: 20px; }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(650px, 1.65fr) minmax(320px, .8fr);
+      gap: 20px;
+      align-items: start;
+    }
+
+    .calendar-panel, .detail-panel {
+      background: var(--paper);
+      border: 1px solid rgba(190,190,180,.7);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .calendar-panel { overflow: hidden; }
+
+    .calendar-toolbar {
+      min-height: 76px;
+      padding: 16px 19px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .month-controls { display: flex; align-items: center; gap: 8px; }
+    .month-controls h2 { min-width: 156px; margin: 0 4px; font-size: 18px; font-weight: 700; text-align: center; }
+
+    .legend { display: flex; gap: 12px; flex-wrap: wrap; color: var(--muted); font-size: 12px; }
+    .legend-item { display: flex; align-items: center; gap: 6px; }
+    .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+    .weekdays, .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+
+    .weekdays {
+      padding: 0 10px;
+      border-bottom: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 750;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .weekdays span { padding: 13px 8px 10px; }
+    .calendar-grid { padding: 10px; gap: 5px; }
+
+    .day {
+      position: relative;
+      min-width: 0;
+      height: 112px;
+      padding: 9px;
+      border: 1px solid transparent;
+      border-radius: 11px;
+      background: transparent;
+      text-align: left;
+      cursor: pointer;
+      overflow: hidden;
+    }
+
+    .day:hover { background: #f5f3ee; border-color: var(--line); }
+    .day.muted { color: #b0b3ad; }
+    .day.in-trip { border-color: rgba(80,80,65,.1); }
+    .day.rome { background: var(--rome-soft); }
+    .day.florence { background: var(--florence-soft); }
+    .day.barcelona { background: var(--barcelona-soft); }
+    .day.lisbon { background: var(--lisbon-soft); }
+    .day.selected { outline: 3px solid var(--green); outline-offset: -2px; }
+
+    .day-number { font-size: 12px; font-weight: 750; }
+    .location { margin-top: 10px; display: block; font-size: 12px; font-weight: 750; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .event-line { margin-top: 6px; display: block; font-size: 10px; line-height: 1.35; color: rgba(32,37,31,.68); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .more { position: absolute; bottom: 8px; right: 9px; font-size: 10px; color: rgba(32,37,31,.55); }
+
+    .detail-panel { overflow: hidden; }
+
+    .destination-strip { height: 7px; background: var(--rome); transition: background .2s ease; }
+
+    .detail-header { padding: 21px 22px 17px; border-bottom: 1px solid var(--line); }
+    .eyebrow { margin: 0 0 8px; color: var(--muted); font-size: 11px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
+    .detail-header h2 { margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: 28px; font-weight: 500; }
+    .detail-header p { margin: 7px 0 0; color: var(--muted); font-size: 13px; }
+
+    .detail-content { padding: 19px 22px 23px; }
+    .section-heading { margin: 0 0 13px; font-size: 13px; font-weight: 800; }
+
+    .timeline { position: relative; display: grid; gap: 0; }
+    .timeline::before { content: ""; position: absolute; left: 54px; top: 8px; bottom: 8px; width: 1px; background: var(--line); }
+
+    .timeline-item {
+      position: relative;
+      display: grid;
+      grid-template-columns: 45px 1fr;
+      gap: 20px;
+      padding: 0 0 18px;
+    }
+
+    .time { padding-top: 2px; color: var(--muted); font-size: 11px; font-weight: 700; }
+    .timeline-body { position: relative; }
+    .timeline-body::before { content: ""; position: absolute; left: -15px; top: 5px; width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 4px var(--paper); }
+    .timeline-body strong { display: block; font-size: 13px; }
+    .timeline-body span { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; line-height: 1.45; }
+
+    .event-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 11px;
+      margin-top: 6px;
+    }
+
+    .event-links a {
+      color: var(--green);
+      font-size: 10px;
+      font-weight: 750;
+      text-decoration: none;
+    }
+
+    .event-links a:hover { text-decoration: underline; }
+
+    .stay-card, .tip-card {
+      margin-top: 4px;
+      padding: 14px;
+      border-radius: 12px;
+      background: #f1efe8;
+    }
+
+    .stay-card { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .stay-card strong, .tip-card strong { display: block; font-size: 12px; }
+    .stay-card span, .tip-card span { display: block; margin-top: 4px; color: var(--muted); font-size: 11px; line-height: 1.4; }
+    .text-button { border: 0; background: transparent; color: var(--green); padding: 8px 0; cursor: pointer; font-weight: 750; font-size: 12px; white-space: nowrap; }
+    .stay-actions { display: flex; flex-direction: column; align-items: flex-end; }
+    .stay-directions { color: var(--green); font-size: 11px; font-weight: 750; text-decoration: none; white-space: nowrap; }
+    .stay-directions:hover { text-decoration: underline; }
+
+    .tip-card { margin-top: 16px; background: var(--green-soft); }
+
+    .explore-section { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--line); }
+
+    .explore-heading-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .explore-heading-row .section-heading { margin: 0; }
+    .explore-city { color: var(--muted); font-size: 11px; }
+
+    .recommendations { display: grid; gap: 9px; }
+
+    .recommendation {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+      padding: 12px 13px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      color: var(--ink);
+      text-decoration: none;
+      background: #fff;
+      transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease;
+    }
+
+    .recommendation:hover {
+      transform: translateY(-1px);
+      border-color: #aeb5ad;
+      box-shadow: 0 7px 18px rgba(35,45,38,.07);
+    }
+
+    .recommendation-type {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--muted);
+      font-size: 9px;
+      font-weight: 850;
+      letter-spacing: .09em;
+      text-transform: uppercase;
+    }
+
+    .recommendation strong { display: block; font-size: 12px; }
+    .recommendation-description { display: block; margin-top: 3px; color: var(--muted); font-size: 10px; line-height: 1.4; }
+    .recommendation-arrow { color: var(--green); font-size: 17px; }
+
+    .mobile-bar { display: none; }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(16, 24, 20, .52);
+    }
+
+    .modal-backdrop.open { display: flex; }
+    .modal { width: min(440px, 100%); padding: 24px; border-radius: 18px; background: var(--paper); box-shadow: 0 24px 80px rgba(0,0,0,.24); }
+    .modal h2 { margin: 0; font-family: Georgia, "Times New Roman", serif; font-weight: 500; }
+    .modal p { color: var(--muted); line-height: 1.55; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 20px; }
+
+    .toast {
+      position: fixed;
+      z-index: 30;
+      right: 24px;
+      bottom: 86px;
+      padding: 13px 17px;
+      border-radius: 10px;
+      background: var(--green);
+      color: #fff;
+      box-shadow: var(--shadow);
+      font-size: 13px;
+      opacity: 0;
+      transform: translateY(10px);
+      pointer-events: none;
+      transition: .2s ease;
+    }
+
+    .toast.show { opacity: 1; transform: translateY(0); }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    .chat-launcher {
+      position: fixed;
+      z-index: 15;
+      right: 24px;
+      bottom: 24px;
+      min-height: 50px;
+      padding: 0 18px;
+      border: 0;
+      border-radius: 25px;
+      background: var(--green);
+      color: #fff;
+      box-shadow: 0 12px 35px rgba(23, 63, 53, .28);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      font-weight: 750;
+    }
+
+    .chat-launcher:hover { transform: translateY(-2px); }
+    .chat-launcher[aria-expanded="true"] { opacity: 0; pointer-events: none; }
+
+    .chat-panel {
+      position: fixed;
+      z-index: 16;
+      right: 24px;
+      bottom: 24px;
+      width: min(380px, calc(100vw - 32px));
+      height: min(560px, calc(100vh - 48px));
+      border: 1px solid rgba(190,190,180,.8);
+      border-radius: 18px;
+      background: var(--paper);
+      box-shadow: 0 24px 70px rgba(22, 33, 26, .22);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      opacity: 0;
+      transform: translateY(14px) scale(.98);
+      transform-origin: bottom right;
+      pointer-events: none;
+      transition: opacity .18s ease, transform .18s ease;
+    }
+
+    .chat-panel.open { opacity: 1; transform: none; pointer-events: auto; }
+
+    .chat-header {
+      padding: 16px 17px;
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      background: var(--green);
+      color: #fff;
+    }
+
+    .bot-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      background: #f1c96f;
+      color: var(--green);
+      font-weight: 900;
+    }
+
+    .chat-title { min-width: 0; flex: 1; }
+    .chat-title strong { display: block; font-size: 14px; }
+    .chat-title span { display: block; margin-top: 2px; color: rgba(255,255,255,.72); font-size: 11px; }
+
+    .chat-close {
+      width: 36px;
+      height: 36px;
+      border: 0;
+      border-radius: 50%;
+      background: rgba(255,255,255,.1);
+      color: #fff;
+      cursor: pointer;
+      font-size: 19px;
+    }
+
+    .chat-messages {
+      min-height: 0;
+      flex: 1;
+      padding: 17px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 11px;
+      background: #f7f5ef;
+    }
+
+    .message {
+      max-width: 84%;
+      padding: 11px 13px;
+      border-radius: 14px;
+      font-size: 13px;
+      line-height: 1.45;
+      white-space: pre-line;
+    }
+
+    .message.bot { align-self: flex-start; border-bottom-left-radius: 4px; background: #fff; border: 1px solid var(--line); }
+    .message.user { align-self: flex-end; border-bottom-right-radius: 4px; background: var(--green); color: #fff; }
+
+    .quick-prompts {
+      padding: 10px 14px 0;
+      display: flex;
+      gap: 7px;
+      overflow-x: auto;
+      background: var(--paper);
+    }
+
+    .quick-prompt {
+      flex: 0 0 auto;
+      min-height: 32px;
+      padding: 0 11px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--paper);
+      color: var(--green);
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .chat-form { padding: 11px 14px 14px; display: flex; gap: 8px; background: var(--paper); }
+
+    .chat-input {
+      min-width: 0;
+      min-height: 42px;
+      flex: 1;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 0 12px;
+      background: #fff;
+      color: var(--ink);
+      font-size: 13px;
+    }
+
+    .chat-send {
+      min-width: 66px;
+      min-height: 42px;
+      border: 0;
+      border-radius: 10px;
+      background: var(--green);
+      color: #fff;
+      cursor: pointer;
+      font-weight: 750;
+    }
+
+    @media (max-width: 1100px) {
+      .workspace { grid-template-columns: 1fr; }
+      .detail-panel { display: grid; grid-template-columns: 7px .72fr 1fr; }
+      .destination-strip { height: auto; }
+      .detail-header { border-bottom: 0; border-right: 1px solid var(--line); }
+    }
+
+    @media (max-width: 780px) {
+      .app-shell { display: block; }
+      .sidebar { display: none; }
+      main { padding: 18px 14px 82px; }
+      .topbar { align-items: flex-start; }
+      .top-actions .button:not(.primary) { display: none; }
+      .calendar-toolbar { align-items: flex-start; flex-direction: column; }
+      .legend { gap: 8px; }
+      .day { height: 94px; padding: 7px; }
+      .event-line { display: none; }
+      .location { margin-top: 7px; font-size: 10px; }
+      .detail-panel { display: block; }
+      .destination-strip { height: 7px; }
+      .detail-header { border-right: 0; border-bottom: 1px solid var(--line); }
+      .mobile-bar { position: fixed; display: flex; z-index: 10; left: 0; right: 0; bottom: 0; justify-content: space-around; padding: 10px 8px max(10px, env(safe-area-inset-bottom)); background: var(--green); color: #fff; }
+      .mobile-bar button { border: 0; background: transparent; color: inherit; font-size: 11px; }
+      .chat-launcher { right: 14px; bottom: 76px; }
+      .chat-panel { right: 10px; bottom: 74px; width: calc(100vw - 20px); height: min(560px, calc(100vh - 92px)); }
+    }
+
+    @media (max-width: 480px) {
+      .top-actions .primary { padding: 0 12px; }
+      .trip-heading p { max-width: 220px; }
+      .weekdays span { text-align: center; padding-inline: 2px; }
+      .calendar-grid { padding: 6px; gap: 2px; }
+      .day { height: 76px; border-radius: 7px; }
+      .location { white-space: normal; line-height: 1.15; }
+      .more { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Main navigation">
+      <div class="brand"><span class="brand-mark">W</span> Wanderplan</div>
+      <nav class="nav-list">
+        <button class="nav-item active"><span class="nav-icon">▦</span>Calendar</button>
+        <button class="nav-item explore-trigger"><span class="nav-icon">⌁</span>Explore</button>
+        <button class="nav-item"><span class="nav-icon">⌖</span>Bookings</button>
+        <button class="nav-item"><span class="nav-icon">◎</span>Budget</button>
+        <button class="nav-item"><span class="nav-icon">✦</span>Travel notes</button>
+      </nav>
+      <div class="sidebar-note">
+        <strong>15-day adventure</strong>
+        4 cities · 3 countries<br>
+        April 5–19, 2027
+      </div>
+    </aside>
+
+    <main>
+      <header class="topbar">
+        <div class="trip-heading">
+          <h1>Southern Europe</h1>
+          <p>April 5–19, 2027 · Janna’s spring trip</p>
+        </div>
+        <div class="top-actions">
+          <button class="button" id="shareButton">Share</button>
+          <button class="button primary" id="addButton">＋ Add activity</button>
+        </div>
+      </header>
+
+      <div class="workspace">
+        <section class="calendar-panel" aria-label="Monthly trip calendar">
+          <div class="calendar-toolbar">
+            <div class="month-controls">
+              <button class="button icon-button" id="previousMonth" aria-label="Previous month">‹</button>
+              <h2 id="monthTitle">April 2027</h2>
+              <button class="button icon-button" id="nextMonth" aria-label="Next month">›</button>
+            </div>
+            <div class="legend" aria-label="Destination colors">
+              <span class="legend-item"><span class="legend-dot" style="background:var(--rome)"></span>Rome</span>
+              <span class="legend-item"><span class="legend-dot" style="background:var(--florence)"></span>Florence</span>
+              <span class="legend-item"><span class="legend-dot" style="background:var(--barcelona)"></span>Barcelona</span>
+              <span class="legend-item"><span class="legend-dot" style="background:var(--lisbon)"></span>Lisbon</span>
+            </div>
+          </div>
+
+          <div class="weekdays" aria-hidden="true">
+            <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+          </div>
+
+          <div class="calendar-grid" id="calendarGrid"></div>
+        </section>
+
+        <aside class="detail-panel" aria-live="polite" aria-label="Selected day details">
+          <div class="destination-strip" id="destinationStrip"></div>
+          <header class="detail-header">
+            <p class="eyebrow" id="detailEyebrow">Day 2 · Rome</p>
+            <h2 id="detailDate">Tuesday, April 6</h2>
+            <p id="detailWeather">21°C · Sunny · Comfortable walking day</p>
+          </header>
+          <div class="detail-content">
+            <h3 class="section-heading">Today’s plan</h3>
+            <div class="timeline" id="timeline"></div>
+
+            <h3 class="section-heading">Your stay</h3>
+            <div class="stay-card">
+              <div>
+                <strong id="stayName">Casa Navona</strong>
+                <span id="stayMeta">Piazza Navona · Check-out Apr 9</span>
+              </div>
+              <div class="stay-actions">
+                <button class="text-button" id="stayButton">View stay →</button>
+                <a class="stay-directions" id="stayDirections" href="#" target="_blank" rel="noopener noreferrer">Directions ↗</a>
+              </div>
+            </div>
+
+            <div class="tip-card">
+              <strong>✦ Local note</strong>
+              <span id="localTip">Cover shoulders and knees inside churches. Ignore anyone offering a “free” bracelet near major sights.</span>
+            </div>
+
+            <section class="explore-section" id="exploreSection" aria-labelledby="exploreHeading">
+              <div class="explore-heading-row">
+                <h3 class="section-heading" id="exploreHeading">Explore this city</h3>
+                <span class="explore-city" id="exploreCity">Rome picks</span>
+              </div>
+              <div class="recommendations" id="recommendations"></div>
+            </section>
+          </div>
+        </aside>
+      </div>
+    </main>
+  </div>
+
+  <nav class="mobile-bar" aria-label="Mobile navigation">
+    <button>▦<br>Calendar</button><button class="explore-trigger">⌁<br>Explore</button><button>⌖<br>Bookings</button><button>◎<br>Budget</button>
+  </nav>
+
+  <div class="modal-backdrop" id="modalBackdrop" role="presentation">
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <h2 id="modalTitle">Add an activity</h2>
+      <p id="modalText">In the working app, this opens a form for an activity name, time, location, reservation link, and notes.</p>
+      <div class="modal-actions">
+        <button class="button" id="closeModal">Close</button>
+        <button class="button primary" id="demoSave">Save example</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="toast" id="toast" role="status">Example activity saved</div>
+
+  <button class="chat-launcher" id="chatLauncher" aria-controls="chatPanel" aria-expanded="false">
+    <span aria-hidden="true">✦</span> Ask Wanderbot
+  </button>
+
+  <section class="chat-panel" id="chatPanel" aria-label="Trip editing assistant" aria-hidden="true">
+    <header class="chat-header">
+      <div class="bot-avatar" aria-hidden="true">✦</div>
+      <div class="chat-title">
+        <strong>Wanderbot</strong>
+        <span>Demo trip-editing assistant</span>
+      </div>
+      <button class="chat-close" id="chatClose" aria-label="Close chat">×</button>
+    </header>
+    <div class="chat-messages" id="chatMessages" aria-live="polite">
+      <div class="message bot">Hi Janna! Select a day, then ask me to find an activity, recommend a restaurant, replace lodging, reschedule plans, or remove a cancelled reservation.</div>
+    </div>
+    <div class="quick-prompts" aria-label="Suggested requests">
+      <button class="quick-prompt" type="button">Find and add an activity</button>
+      <button class="quick-prompt" type="button">Recommend a restaurant</button>
+      <button class="quick-prompt" type="button">Find new lodging</button>
+      <button class="quick-prompt" type="button">My dinner reservation was cancelled</button>
+    </div>
+    <form class="chat-form" id="chatForm">
+      <label class="sr-only" for="chatInput">Ask Wanderbot to edit the trip</label>
+      <input class="chat-input" id="chatInput" type="text" placeholder="Try: add lunch at 1 PM" autocomplete="off">
+      <button class="chat-send" type="submit">Send</button>
+    </form>
+  </section>
+
+  <script>
+    const tripDays = {
+      5: { city: 'Rome', className: 'rome', day: 1, weather: '20°C · Clear skies · Light jacket at night', stay: ['Casa Navona', 'Piazza Navona · Check-out Apr 9'], tip: 'Keep small valuables zipped away around Termini station and busy buses.', events: [['9:30', 'Arrive in Rome', 'Leonardo Express to city center'], ['12:00', 'Check in', 'Drop bags at Casa Navona'], ['14:00', 'Historic center walk', 'Pantheon, Trevi Fountain, Spanish Steps'], ['19:30', 'Welcome dinner', 'Reserved table in Trastevere']] },
+      6: { city: 'Rome', className: 'rome', day: 2, weather: '21°C · Sunny · Comfortable walking day', stay: ['Casa Navona', 'Piazza Navona · Check-out Apr 9'], tip: 'Cover shoulders and knees inside churches. Ignore anyone offering a “free” bracelet near major sights.', events: [['8:30', 'Coffee & cornetto', 'Breakfast near Piazza Navona'], ['10:00', 'Colosseum tour', 'Timed entry · confirmation saved'], ['13:00', 'Lunch in Monti', 'Try cacio e pepe'], ['15:30', 'Roman Forum', 'Walk from the Colosseum'], ['19:00', 'Trastevere evening', 'Dinner and neighborhood stroll']] },
+      7: { city: 'Rome', className: 'rome', day: 3, weather: '19°C · Partly cloudy · Bring a light layer', stay: ['Casa Navona', 'Piazza Navona · Check-out Apr 9'], tip: 'Museum entry times are strict; arrive 20 minutes early with photo ID.', events: [['9:00', 'Vatican Museums', 'Reserved entry'], ['12:30', 'Prati lunch', 'Casual neighborhood trattoria'], ['15:00', 'Villa Borghese', 'Gardens and overlook'], ['20:00', 'Free evening', 'Agent recommendations nearby']] },
+      8: { city: 'Rome', className: 'rome', day: 4, weather: '22°C · Sunny · Warm afternoon', stay: ['Casa Navona', 'Piazza Navona · Check-out Apr 9'], tip: 'A small service charge may be listed as “coperto” on restaurant menus.', events: [['9:30', 'Campo de’ Fiori', 'Market walk'], ['11:00', 'Jewish Quarter', 'Self-guided history route'], ['14:30', 'Hidden-gem courtyards', 'Agent-curated walk'], ['19:30', 'Dinner reservation', 'Testaccio']] },
+      9: { city: 'Florence', className: 'florence', day: 5, weather: '18°C · Cloudy · Chance of drizzle', stay: ['Arno House', 'Santa Croce · Check-out Apr 12'], tip: 'Validate regional train tickets when required before boarding.', events: [['9:10', 'Train to Florence', 'Roma Termini → Firenze SMN'], ['11:30', 'Check in', 'Arno House'], ['14:00', 'Duomo district', 'Cathedral and piazza'], ['18:30', 'Sunset at Piazzale Michelangelo', 'Walk or bus uphill']] },
+      10: { city: 'Florence', className: 'florence', day: 6, weather: '20°C · Bright · Mild evening', stay: ['Arno House', 'Santa Croce · Check-out Apr 12'], tip: 'Many smaller shops pause in the afternoon; check hours before crossing town.', events: [['9:00', 'Uffizi Gallery', 'Timed entry'], ['12:30', 'Mercato Centrale', 'Lunch stalls'], ['15:00', 'Oltrarno workshops', 'Artisan neighborhood'], ['19:30', 'Tuscan dinner', 'Reservation saved']] },
+      11: { city: 'Florence', className: 'florence', day: 7, weather: '19°C · Light clouds · Good visibility', stay: ['Arno House', 'Santa Croce · Check-out Apr 12'], tip: 'Stand at the bar for a less expensive coffee than table service.', events: [['8:30', 'Accademia Gallery', 'See Michelangelo’s David'], ['11:00', 'San Lorenzo', 'Market and basilica'], ['15:00', 'Free exploration', 'Agent-selected hidden gems'], ['18:00', 'Arno river walk', 'Golden-hour route']] },
+      12: { city: 'Barcelona', className: 'barcelona', day: 8, weather: '22°C · Sunny · Breezy by the water', stay: ['Eixample Loft', 'Carrer de Mallorca · Check-out Apr 16'], tip: 'Watch phones and bags on Las Ramblas and crowded metro platforms.', events: [['9:45', 'Flight to Barcelona', 'FLR → BCN'], ['13:00', 'Check in', 'Eixample Loft'], ['16:00', 'Gothic Quarter', 'Guided walking route'], ['20:30', 'Tapas crawl', 'Three small local spots']] },
+      13: { city: 'Barcelona', className: 'barcelona', day: 9, weather: '23°C · Clear · UV protection recommended', stay: ['Eixample Loft', 'Carrer de Mallorca · Check-out Apr 16'], tip: 'Dinner commonly starts later than in the U.S.; 8:30–10 p.m. is normal.', events: [['9:00', 'Sagrada Família', 'Tower access reserved'], ['12:30', 'Gràcia lunch', 'Neighborhood café'], ['15:00', 'Park Güell', 'Timed entry'], ['20:30', 'Dinner', 'Eixample']] },
+      14: { city: 'Barcelona', className: 'barcelona', day: 10, weather: '21°C · Mixed sun · Coastal breeze', stay: ['Eixample Loft', 'Carrer de Mallorca · Check-out Apr 16'], tip: 'Catalan and Spanish are both widely used; a simple “bon dia” is appreciated.', events: [['10:00', 'Boqueria market', 'Tasting route'], ['12:00', 'El Raval art walk', 'MACBA and street art'], ['15:30', 'Barceloneta', 'Beach and harbor'], ['21:00', 'Flamenco show', 'Tickets saved']] },
+      15: { city: 'Barcelona', className: 'barcelona', day: 11, weather: '24°C · Sunny · Warmest trip day', stay: ['Eixample Loft', 'Carrer de Mallorca · Check-out Apr 16'], tip: 'Avoid restaurants with large photo menus beside the busiest tourist sights.', events: [['9:30', 'Montjuïc', 'Gardens and viewpoints'], ['13:00', 'Poble-sec lunch', 'Pinchos street'], ['16:00', 'Design Museum', 'Optional indoor stop'], ['19:00', 'Free evening', 'Flexible recommendations']] },
+      16: { city: 'Lisbon', className: 'lisbon', day: 12, weather: '20°C · Sunny · Windy overlooks', stay: ['Alfama Terrace', 'Rua dos Remédios · Check-out Apr 20'], tip: 'Lisbon’s hills are steep and cobbled; wear shoes with good grip.', events: [['10:20', 'Flight to Lisbon', 'BCN → LIS'], ['13:00', 'Check in', 'Alfama Terrace'], ['15:30', 'Alfama walk', 'Viewpoints and lanes'], ['20:00', 'Fado dinner', 'Reservation saved']] },
+      17: { city: 'Lisbon', className: 'lisbon', day: 13, weather: '19°C · Partly cloudy · Cool evening', stay: ['Alfama Terrace', 'Rua dos Remédios · Check-out Apr 20'], tip: 'On vintage tram routes, keep belongings in front of you when it gets crowded.', events: [['9:00', 'Belém morning', 'Tower, monastery, custard tart'], ['13:30', 'LX Factory', 'Lunch and shops'], ['16:00', 'Time Out Market', 'Flexible tasting stop'], ['19:30', 'Miradouro sunset', 'São Pedro de Alcântara']] },
+      18: { city: 'Lisbon', className: 'lisbon', day: 14, weather: '21°C · Clear · Excellent day trip weather', stay: ['Alfama Terrace', 'Rua dos Remédios · Check-out Apr 20'], tip: 'Sintra microclimates change quickly; bring a thin rain layer even on clear days.', events: [['8:15', 'Train to Sintra', 'Depart Rossio Station'], ['10:00', 'Pena Palace', 'Timed entry'], ['13:00', 'Old town lunch', 'Local bakery and café'], ['16:00', 'Quinta da Regaleira', 'Gardens and wells']] },
+      19: { city: 'Lisbon', className: 'lisbon', day: 15, weather: '22°C · Sunny · Pleasant evening', stay: ['Alfama Terrace', 'Rua dos Remédios · Check-out Apr 20'], tip: 'Ask before photographing people, especially in small neighborhood shops.', events: [['9:30', 'Tile Museum', 'Azulejo collection'], ['12:30', 'Final lunch', 'Seafood near the river'], ['15:00', 'Souvenirs & packing', 'Flexible afternoon'], ['19:30', 'Farewell dinner', 'Chef’s tasting menu']] }
+    };
+
+    const cityRecommendations = {
+      Rome: [
+        { type: 'Hidden gem', name: 'Centrale Montemartini', description: 'Ancient Roman sculptures displayed inside a former power station.', url: 'https://www.turismoroma.it/en/node/172773' },
+        { type: 'Tourist attraction', name: 'The Colosseum', description: 'Explore Rome’s landmark amphitheater, Forum, and Palatine area.', url: 'https://www.turismoroma.it/en/node/1155' },
+        { type: 'Cultural activity', name: 'Galleria Borghese', description: 'See Bernini, Caravaggio, Raphael, and more in a historic villa.', url: 'https://galleriaborghese.cultura.gov.it/' }
+      ],
+      Florence: [
+        { type: 'Hidden gem', name: 'Bardini Garden', description: 'A hillside garden with a quiet walk and panoramic city views.', url: 'https://www.feelflorence.it/en/points-interest/bardini-garden' },
+        { type: 'Tourist attraction', name: 'Florence Cathedral', description: 'Visit Santa Maria del Fiore and Brunelleschi’s famous dome.', url: 'https://www.feelflorence.it/en/points-interest/cathedral-santa-maria-del-fiore' },
+        { type: 'Cultural activity', name: 'Uffizi Gallery', description: 'Experience Botticelli, Leonardo, Michelangelo, and Renaissance art.', url: 'https://www.feelflorence.it/en/points-interest/uffizi-gallery' }
+      ],
+      Barcelona: [
+        { type: 'Hidden gem', name: 'Sant Pau Art Nouveau Site', description: 'Wander through a restored modernist hospital and garden city.', url: 'https://bid.barcelonaturisme.com/wv3/en/page/384/sant-pau-recinte-modernista.html' },
+        { type: 'Tourist attraction', name: 'Sagrada Família', description: 'Discover Gaudí’s extraordinary basilica and symbolic architecture.', url: 'https://bid.barcelonaturisme.com/wv3/en/page/2335/basilica-of-la-sagrada-familia.html' },
+        { type: 'Cultural activity', name: 'Picasso’s Barcelona', description: 'Follow the artist’s city story with a museum visit or guided walk.', url: 'https://www.barcelonaturisme.com/wv3/en/agenda/17743/visit-picasso-s-barcelona.html' }
+      ],
+      Lisbon: [
+        { type: 'Hidden gem', name: 'Casa do Alentejo', description: 'Step inside an ornate former palace celebrating Alentejo culture.', url: 'https://www.visitlisboa.com/en/p/only-in-lisbon' },
+        { type: 'Tourist attraction', name: 'Jerónimos Monastery', description: 'Explore a UNESCO-listed monument central to Portuguese history.', url: 'https://www.visitlisboa.com/en/places/jeronimos-monastery' },
+        { type: 'Cultural activity', name: 'Museum of Fado', description: 'Hear the story and sounds of Portugal’s traditional urban music.', url: 'https://www.visitlisboa.com/en/places/museum-of-fado' }
+      ]
+    };
+
+    const botSuggestions = {
+      Rome: {
+        activity: ['17:00', 'Centrale Montemartini', 'Hidden-gem museum suggested by Wanderbot', 'https://www.turismoroma.it/en/node/172773'],
+        restaurant: ['19:30', 'Dinner at La Buca Romana', 'Traditional Roman trattoria recommendation', 'https://www.turismoroma.it/it/tipologia-accoglienza-08/ristoranti'],
+        lodging: ['Hotel Campo de’ Fiori', 'Campo de’ Fiori · Wanderbot lodging match']
+      },
+      Florence: {
+        activity: ['16:30', 'Bardini Garden', 'Panoramic garden suggested by Wanderbot', 'https://www.feelflorence.it/en/points-interest/bardini-garden'],
+        restaurant: ['19:30', 'Dinner at Cibrèo Trattoria', 'Tuscan restaurant recommendation near Sant’Ambrogio', 'https://www.google.com/search?q=Cibreo+Trattoria+Florence'],
+        lodging: ['Hotel Spadai', 'Duomo district · Wanderbot lodging match']
+      },
+      Barcelona: {
+        activity: ['17:00', 'Sant Pau Art Nouveau Site', 'Modernist architecture suggested by Wanderbot', 'https://bid.barcelonaturisme.com/wv3/en/page/384/sant-pau-recinte-modernista.html'],
+        restaurant: ['20:30', 'Dinner at 1881 per Sagardi', 'Mediterranean restaurant recommendation by the harbor', 'https://www.barcelonaturisme.com/wv3/en/page/6/restaurants.html'],
+        lodging: ['Praktik Garden', 'Eixample · Wanderbot lodging match']
+      },
+      Lisbon: {
+        activity: ['16:30', 'Casa do Alentejo', 'Ornate cultural palace suggested by Wanderbot', 'https://www.visitlisboa.com/en/p/only-in-lisbon'],
+        restaurant: ['20:00', 'Dinner at Tavares', 'Historic Lisbon restaurant recommendation', 'https://www.visitlisboa.com/en/p/only-in-lisbon'],
+        lodging: ['Memmo Alfama', 'Alfama · Wanderbot lodging match']
+      }
+    };
+
+    const calendarGrid = document.getElementById('calendarGrid');
+    const monthTitle = document.getElementById('monthTitle');
+    const detailEyebrow = document.getElementById('detailEyebrow');
+    const detailDate = document.getElementById('detailDate');
+    const detailWeather = document.getElementById('detailWeather');
+    const destinationStrip = document.getElementById('destinationStrip');
+    const timeline = document.getElementById('timeline');
+    const stayName = document.getElementById('stayName');
+    const stayMeta = document.getElementById('stayMeta');
+    const stayDirections = document.getElementById('stayDirections');
+    const localTip = document.getElementById('localTip');
+    const exploreCity = document.getElementById('exploreCity');
+    const recommendations = document.getElementById('recommendations');
+    let selectedDay = 6;
+
+    const dayLabels = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const colors = { rome: 'var(--rome)', florence: 'var(--florence)', barcelona: 'var(--barcelona)', lisbon: 'var(--lisbon)' };
+
+    function shortEvent(event) {
+      return `${event[0]} · ${event[1]}`;
+    }
+
+    function renderCalendar() {
+      calendarGrid.innerHTML = '';
+      const cells = [28, 29, 30, 31, ...Array.from({length: 30}, (_, i) => i + 1), 1, 2, 3, 4, 5, 6, 7, 8];
+      cells.forEach((date, index) => {
+        const isApril = index >= 4 && index < 34;
+        const info = isApril ? tripDays[date] : null;
+        const button = document.createElement('button');
+        button.className = `day${isApril ? '' : ' muted'}${info ? ` in-trip ${info.className}` : ''}${date === selectedDay && isApril ? ' selected' : ''}`;
+        button.type = 'button';
+        button.disabled = !info;
+        button.setAttribute('aria-label', info ? `April ${date}, ${info.city}, ${info.events.length} activities` : `${isApril ? 'April' : index < 4 ? 'March' : 'May'} ${date}`);
+        button.innerHTML = `<span class="day-number">${date}</span>${info ? `<span class="location">${info.city}</span><span class="event-line">${shortEvent(info.events[0])}</span><span class="more">+${info.events.length - 1}</span>` : ''}`;
+        if (info) button.addEventListener('click', () => selectDay(date));
+        calendarGrid.appendChild(button);
+      });
+    }
+
+    function placeLinks(event, city) {
+      const placeQuery = encodeURIComponent(`${event[1]} ${event[2]} ${city}`);
+      const directionsQuery = encodeURIComponent(`${event[1]}, ${city}`);
+      const detailsUrl = event[3] || `https://www.google.com/search?q=${placeQuery}`;
+      return `
+        <div class="event-links">
+          <a href="${detailsUrl}" target="_blank" rel="noopener noreferrer" aria-label="Place information for ${event[1]}, opens in a new tab">Place info ↗</a>
+          <a href="https://www.google.com/maps/dir/?api=1&destination=${directionsQuery}" target="_blank" rel="noopener noreferrer" aria-label="Directions to ${event[1]}, opens in a new tab">Directions ↗</a>
+        </div>`;
+    }
+
+    function selectDay(date) {
+      selectedDay = date;
+      const info = tripDays[date];
+      detailEyebrow.textContent = `Day ${info.day} · ${info.city}`;
+      const weekday = dayLabels[new Date(2027, 3, date).getDay()];
+      detailDate.textContent = `${weekday}, April ${date}`;
+      detailWeather.textContent = info.weather;
+      destinationStrip.style.background = colors[info.className];
+      stayName.textContent = info.stay[0];
+      stayMeta.textContent = info.stay[1];
+      stayDirections.href = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${info.stay[0]}, ${info.city}`)}`;
+      stayDirections.setAttribute('aria-label', `Directions to ${info.stay[0]}, opens in a new tab`);
+      localTip.textContent = info.tip;
+      exploreCity.textContent = `${info.city} picks`;
+      recommendations.innerHTML = cityRecommendations[info.city].map(item => `
+        <a class="recommendation" href="${item.url}" target="_blank" rel="noopener noreferrer" aria-label="${item.type}: ${item.name}, opens in a new tab">
+          <span>
+            <span class="recommendation-type">${item.type}</span>
+            <strong>${item.name}</strong>
+            <span class="recommendation-description">${item.description}</span>
+          </span>
+          <span class="recommendation-arrow" aria-hidden="true">↗</span>
+        </a>`).join('');
+      timeline.innerHTML = info.events.map(event => `
+        <div class="timeline-item">
+          <span class="time">${event[0]}</span>
+          <div class="timeline-body"><strong>${event[1]}</strong><span>${event[2]}</span>${placeLinks(event, info.city)}</div>
+        </div>`).join('');
+      renderCalendar();
+    }
+
+    const modalBackdrop = document.getElementById('modalBackdrop');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalText = document.getElementById('modalText');
+
+    function openModal(title, text, showSave = false) {
+      modalTitle.textContent = title;
+      modalText.textContent = text;
+      document.getElementById('demoSave').style.display = showSave ? '' : 'none';
+      modalBackdrop.classList.add('open');
+      document.getElementById('closeModal').focus();
+    }
+
+    function closeModal() { modalBackdrop.classList.remove('open'); }
+
+    document.getElementById('addButton').addEventListener('click', () => openModal('Add an activity', 'In the working app, this opens a form for an activity name, time, location, reservation link, and notes.', true));
+    document.getElementById('shareButton').addEventListener('click', () => openModal('Share this trip', 'Invite travel companions or copy a view-only link. This wireframe does not send anything yet.'));
+    document.getElementById('stayButton').addEventListener('click', () => openModal(stayName.textContent, `${stayMeta.textContent}. A working version would show the address, confirmation number, check-in instructions, and booking link.`));
+    document.getElementById('closeModal').addEventListener('click', closeModal);
+    modalBackdrop.addEventListener('click', event => { if (event.target === modalBackdrop) closeModal(); });
+    document.addEventListener('keydown', event => { if (event.key === 'Escape') closeModal(); });
+    document.getElementById('demoSave').addEventListener('click', () => {
+      closeModal();
+      const toast = document.getElementById('toast');
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 1800);
+    });
+
+    ['previousMonth', 'nextMonth'].forEach(id => {
+      document.getElementById(id).addEventListener('click', () => {
+        const toast = document.getElementById('toast');
+        toast.textContent = 'This wireframe focuses on the April trip';
+        toast.classList.add('show');
+        setTimeout(() => { toast.classList.remove('show'); toast.textContent = 'Example activity saved'; }, 1800);
+      });
+    });
+
+    document.querySelectorAll('.nav-item:not(.active):not(.explore-trigger), .mobile-bar button:not(.explore-trigger)').forEach(button => {
+      button.addEventListener('click', () => {
+        const toast = document.getElementById('toast');
+        toast.textContent = `${button.textContent.trim()} is planned for a later checkpoint`;
+        toast.classList.add('show');
+        setTimeout(() => { toast.classList.remove('show'); toast.textContent = 'Example activity saved'; }, 1800);
+      });
+    });
+
+    document.querySelectorAll('.explore-trigger').forEach(button => {
+      button.addEventListener('click', () => {
+        document.getElementById('exploreSection').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+    });
+
+    const chatLauncher = document.getElementById('chatLauncher');
+    const chatPanel = document.getElementById('chatPanel');
+    const chatClose = document.getElementById('chatClose');
+    const chatForm = document.getElementById('chatForm');
+    const chatInput = document.getElementById('chatInput');
+    const chatMessages = document.getElementById('chatMessages');
+
+    function setChat(open) {
+      chatPanel.classList.toggle('open', open);
+      chatPanel.setAttribute('aria-hidden', String(!open));
+      chatLauncher.setAttribute('aria-expanded', String(open));
+      if (open) setTimeout(() => chatInput.focus(), 100);
+      else chatLauncher.focus();
+    }
+
+    function addMessage(text, sender) {
+      const message = document.createElement('div');
+      message.className = `message ${sender}`;
+      message.textContent = text;
+      chatMessages.appendChild(message);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function timeFromRequest(request, fallback) {
+      const match = request.match(/(?:at|to)\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
+      if (!match) return fallback;
+      let hour = Number(match[1]);
+      const minute = match[2] || '00';
+      const period = (match[3] || '').toLowerCase();
+      if (period === 'pm' && hour < 12) hour += 12;
+      if (period === 'am' && hour === 12) hour = 0;
+      return `${String(hour).padStart(2, '0')}:${minute}`;
+    }
+
+    function sortEventsByTime(events) {
+      events.sort((a, b) => {
+        const [aHour, aMinute] = a[0].split(':').map(Number);
+        const [bHour, bMinute] = b[0].split(':').map(Number);
+        return (aHour * 60 + aMinute) - (bHour * 60 + bMinute);
+      });
+    }
+
+    function editTripWithBot(request) {
+      const text = request.toLowerCase();
+      const info = tripDays[selectedDay];
+      const dateLabel = `April ${selectedDay} in ${info.city}`;
+      const suggestions = botSuggestions[info.city];
+
+      if ((text.includes('find') || text.includes('recommend') || text.includes('suggest')) && text.includes('activity')) {
+        const activity = [...suggestions.activity];
+        if (info.events.some(event => event[1] === activity[1])) {
+          return `I already added “${activity[1]}” to ${dateLabel}. Try asking for a restaurant or a lighter day next.`;
+        }
+        info.events.push(activity);
+        sortEventsByTime(info.events);
+        selectDay(selectedDay);
+        return `I found “${activity[1]}” and added it at ${activity[0]} on ${dateLabel}. I included place information and directions.`;
+      }
+
+      if (text.includes('restaurant') || (text.includes('recommend') && (text.includes('dinner') || text.includes('food')))) {
+        const restaurant = [...suggestions.restaurant];
+        if (info.events.some(event => event[1] === restaurant[1])) {
+          return `“${restaurant[1]}” is already on ${dateLabel}. Its place and directions links are in the schedule.`;
+        }
+        info.events.push(restaurant);
+        sortEventsByTime(info.events);
+        selectDay(selectedDay);
+        return `I found ${restaurant[1].replace('Dinner at ', '')} and added it at ${restaurant[0]} on ${dateLabel}. You can open its details or directions from the schedule.`;
+      }
+
+      if (text.includes('lodging') || text.includes('hotel') || text.includes('accommodation')) {
+        const oldStay = info.stay[0];
+        info.stay = [...suggestions.lodging];
+        selectDay(selectedDay);
+        return `I replaced ${oldStay} with ${info.stay[0]} for ${info.city}. The stay card and directions link are updated.`;
+      }
+
+      if (text.includes('add') && (text.includes('free') || text.includes('break'))) {
+        const time = timeFromRequest(request, '16:00');
+        info.events.push([time, 'Free time', 'Added by Wanderbot · flexible plans']);
+        sortEventsByTime(info.events);
+        selectDay(selectedDay);
+        return `Done — I added free time at ${time} on ${dateLabel}. The calendar and schedule are updated.`;
+      }
+
+      if (text.includes('add') && text.includes('lunch')) {
+        const time = timeFromRequest(request, '13:00');
+        info.events.push([time, 'Lunch', 'New activity · restaurant to be chosen']);
+        sortEventsByTime(info.events);
+        selectDay(selectedDay);
+        return `Added lunch at ${time} on ${dateLabel}. I left the restaurant flexible for now.`;
+      }
+
+      if ((text.includes('move') || text.includes('reschedule')) && text.includes('dinner')) {
+        const dinner = info.events.find(event => event[1].toLowerCase().includes('dinner'));
+        const time = timeFromRequest(request, '20:30');
+        if (!dinner) return `I couldn't find a dinner on ${dateLabel}. Try “add dinner at 8:30 PM” instead.`;
+        const oldTime = dinner[0];
+        dinner[0] = time;
+        sortEventsByTime(info.events);
+        selectDay(selectedDay);
+        return `Done — I moved ${dinner[1].toLowerCase()} from ${oldTime} to ${time} on ${dateLabel}.`;
+      }
+
+      if (text.includes('remove') || text.includes('cancelled') || text.includes('canceled') || text.includes('cancel')) {
+        const meaningfulWords = text.split(/[^a-zà-ÿ]+/).filter(word => word.length > 4 && !['reservation', 'cancelled', 'canceled', 'remove', 'activity'].includes(word));
+        let activity = info.events.find(event => {
+          const eventText = `${event[1]} ${event[2]}`.toLowerCase();
+          return meaningfulWords.some(word => eventText.includes(word));
+        });
+        if (!activity && text.includes('dinner')) activity = info.events.find(event => event[1].toLowerCase().includes('dinner'));
+        if (!activity && (text.includes('reservation') || text.includes('cancel'))) {
+          activity = info.events.find(event => /reserved|reservation|timed entry|confirmation saved/i.test(`${event[1]} ${event[2]}`));
+        }
+        if (!activity) return `I couldn't match that cancellation to ${dateLabel}. Tell me the activity name, for example “remove Park Güell.”`;
+        info.events = info.events.filter(event => event !== activity);
+        selectDay(selectedDay);
+        return `I removed the cancelled reservation “${activity[1]}” from ${dateLabel}. The calendar and activity count are updated.`;
+      }
+
+      if (text.includes('lighter') || text.includes('too busy') || text.includes('relax')) {
+        const lastFlexible = [...info.events].reverse().find(event => !/flight|train|check|reserved|timed/i.test(`${event[1]} ${event[2]}`));
+        if (!lastFlexible) return `${dateLabel} is already focused on essential reservations and travel. I’d keep it as planned.`;
+        return `For a lighter ${dateLabel}, I suggest removing “${lastFlexible[1]}” at ${lastFlexible[0]}. Say “remove ${lastFlexible[1]}” and I’ll update it.`;
+      }
+
+      if (text.includes('help') || text.includes('what can')) {
+        return 'I can find and add an activity, recommend a restaurant, replace lodging, add lunch or free time, move dinner, or remove a cancelled reservation. Select a calendar day first so I know what to edit.';
+      }
+
+      return `I can help with that. Try “find an activity,” “recommend a restaurant,” “find new lodging,” or “my ${info.events[0][1]} reservation was cancelled.”`;
+    }
+
+    function submitChat(request) {
+      const cleanRequest = request.trim();
+      if (!cleanRequest) return;
+      addMessage(cleanRequest, 'user');
+      chatInput.value = '';
+      setTimeout(() => addMessage(editTripWithBot(cleanRequest), 'bot'), 260);
+    }
+
+    chatLauncher.addEventListener('click', () => setChat(true));
+    chatClose.addEventListener('click', () => setChat(false));
+    chatForm.addEventListener('submit', event => {
+      event.preventDefault();
+      submitChat(chatInput.value);
+    });
+    document.querySelectorAll('.quick-prompt').forEach(button => {
+      button.addEventListener('click', () => submitChat(button.textContent));
+    });
+
+    selectDay(selectedDay);
+  </script>
+</body>
+</html>
