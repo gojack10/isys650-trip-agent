@@ -668,7 +668,7 @@
       <button class="chat-close" id="chatClose" aria-label="Close chat">×</button>
     </header>
     <div class="chat-messages" id="chatMessages" aria-live="polite">
-      <div class="message bot">Tell me your destination, travel dates, budget and interests. I’ll draft a trip of up to 30 days and show it on the calendar. You can keep revising the current trip.</div>
+      <div class="message bot">Tell me your destination, travel dates, budget and interests. I’ll draft your requested trip of up to 30 days and show every day on the calendar. You can keep revising the current trip.</div>
     </div>
     <form class="chat-form" id="chatForm">
       <label class="sr-only" for="chatInput">Ask Wanderbot to edit the trip</label>
@@ -827,8 +827,7 @@
       const [year, month, date] = plan.days[0].date.split('-').map(Number);
       currentMonth = new Date(year, month - 1, 1);
       document.querySelector('.trip-heading h1').textContent = plan.title;
-      const lastDay = plan.days[plan.days.length - 1];
-      document.getElementById('tripDates').textContent = `${plan.days[0].date} – ${lastDay.date} · AI draft, no bookings`;
+      document.getElementById('tripDates').textContent = `${plan.days[0].date} – ${plan.days[plan.days.length - 1].date} · ${plan.days.length}-day AI draft, no bookings`;
       document.querySelector('.sidebar-note').textContent = `${plan.days.length}-day draft · ${cities.join(' · ')}`;
       document.getElementById('legend').innerHTML = cities.map((city, index) => `<span class="legend-item"><span class="legend-dot" style="background:${colors[palette[index % palette.length]]}"></span>${escapeHtml(city)}</span>`).join('');
       document.querySelector('.detail-panel').hidden = false;
