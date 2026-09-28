@@ -27,6 +27,7 @@
     }
 
     * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
 
     body {
       margin: 0;
@@ -561,18 +562,14 @@
         <button class="nav-item"><span class="nav-icon">◎</span>Budget</button>
         <button class="nav-item"><span class="nav-icon">✦</span>Travel notes</button>
       </nav>
-      <div class="sidebar-note">
-        <strong>15-day adventure</strong>
-        4 cities · 3 countries<br>
-        April 5–19, 2027
-      </div>
+      <div class="sidebar-note">No trip yet</div>
     </aside>
 
     <main>
       <header class="topbar">
         <div class="trip-heading">
-          <h1>Southern Europe</h1>
-          <p id="tripDates">April 5–19, 2027 · Sample itinerary</p>
+          <h1>Your trip</h1>
+          <p id="tripDates">No itinerary yet · Ask Wanderbot to start</p>
         </div>
         <div class="top-actions">
           <button class="button" id="resetDemo">Reset demo</button>
@@ -586,15 +583,10 @@
           <div class="calendar-toolbar">
             <div class="month-controls">
               <button class="button icon-button" id="previousMonth" aria-label="Previous month">‹</button>
-              <h2 id="monthTitle">April 2027</h2>
+              <h2 id="monthTitle"></h2>
               <button class="button icon-button" id="nextMonth" aria-label="Next month">›</button>
             </div>
-            <div class="legend" id="legend" aria-label="Destination colors">
-              <span class="legend-item"><span class="legend-dot" style="background:var(--rome)"></span>Rome</span>
-              <span class="legend-item"><span class="legend-dot" style="background:var(--florence)"></span>Florence</span>
-              <span class="legend-item"><span class="legend-dot" style="background:var(--barcelona)"></span>Barcelona</span>
-              <span class="legend-item"><span class="legend-dot" style="background:var(--lisbon)"></span>Lisbon</span>
-            </div>
+            <div class="legend" id="legend" aria-label="Destination colors"></div>
           </div>
 
           <div class="weekdays" aria-hidden="true">
@@ -604,12 +596,12 @@
           <div class="calendar-grid" id="calendarGrid"></div>
         </section>
 
-        <aside class="detail-panel" aria-live="polite" aria-label="Selected day details">
+        <aside class="detail-panel" hidden aria-live="polite" aria-label="Selected day details">
           <div class="destination-strip" id="destinationStrip"></div>
           <header class="detail-header">
-            <p class="eyebrow" id="detailEyebrow">Day 2 · Rome</p>
-            <h2 id="detailDate">Tuesday, April 6</h2>
-            <p id="detailWeather">21°C · Sunny · Comfortable walking day</p>
+            <p class="eyebrow" id="detailEyebrow"></p>
+            <h2 id="detailDate"></h2>
+            <p id="detailWeather"></p>
           </header>
           <div class="detail-content">
             <h3 class="section-heading">Today’s plan</h3>
@@ -618,8 +610,8 @@
             <h3 class="section-heading">Your stay</h3>
             <div class="stay-card">
               <div>
-                <strong id="stayName">Casa Navona</strong>
-                <span id="stayMeta">Piazza Navona · Check-out Apr 9</span>
+                <strong id="stayName"></strong>
+                <span id="stayMeta"></span>
               </div>
               <div class="stay-actions">
                 <button class="text-button" id="stayButton">View stay →</button>
@@ -629,13 +621,13 @@
 
             <div class="tip-card">
               <strong>✦ Local note</strong>
-              <span id="localTip">Cover shoulders and knees inside churches. Ignore anyone offering a “free” bracelet near major sights.</span>
+              <span id="localTip"></span>
             </div>
 
             <section class="explore-section" id="exploreSection" aria-labelledby="exploreHeading">
               <div class="explore-heading-row">
                 <h3 class="section-heading" id="exploreHeading">Explore this city</h3>
-                <span class="explore-city" id="exploreCity">Rome picks</span>
+                <span class="explore-city" id="exploreCity"></span>
               </div>
               <div class="recommendations" id="recommendations"></div>
             </section>
@@ -740,9 +732,10 @@
     const localTip = document.getElementById('localTip');
     const exploreCity = document.getElementById('exploreCity');
     const recommendations = document.getElementById('recommendations');
-    let currentMonth = new Date(2027, 3, 1);
-    let selectedKey = '2027-04-06';
-    let generatedDays = null;
+    let currentMonth = new Date();
+    currentMonth.setDate(1);
+    let selectedKey = '';
+    let generatedDays = {};
     let activePlan = null;
     let revisions = 0;
     let pendingRequest = '';
@@ -752,8 +745,7 @@
     const palette = Object.keys(colors);
     const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[char]));
     const keyFor = date => `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(date).padStart(2, '0')}`;
-    const infoFor = date => generatedDays ? generatedDays[keyFor(date)] :
-      (currentMonth.getFullYear() === 2027 && currentMonth.getMonth() === 3 ? tripDays[date] : null);
+    const infoFor = date => generatedDays[keyFor(date)];
 
     function renderCalendar() {
       calendarGrid.replaceChildren();
@@ -839,6 +831,7 @@
       document.getElementById('tripDates').textContent = `${plan.days[0].date} – ${plan.days[2].date} · AI draft, no bookings`;
       document.querySelector('.sidebar-note').textContent = `${plan.days.length}-day draft · ${cities.join(' · ')}`;
       document.getElementById('legend').innerHTML = cities.map((city, index) => `<span class="legend-item"><span class="legend-dot" style="background:${colors[palette[index % palette.length]]}"></span>${escapeHtml(city)}</span>`).join('');
+      document.querySelector('.detail-panel').hidden = false;
       selectDay(date);
     }
 
@@ -967,7 +960,7 @@
       event.preventDefault();
       submitChat(chatInput.value);
     });
-    selectDay(6);
+    renderCalendar();
   </script>
 </body>
 </html>
