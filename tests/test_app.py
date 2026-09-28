@@ -1,6 +1,7 @@
 import json
 import tempfile
 import unittest
+from datetime import date, timedelta
 from pathlib import Path
 from unittest.mock import patch
 
@@ -63,6 +64,31 @@ class PlannerTest(unittest.TestCase):
                 last_prompt = last_payload["messages"][1]["content"]
                 self.assertIn("Previous itinerary:", last_prompt)
                 self.assertIn("Revision requested: Make day two less busy", last_prompt)
+
+    def test_accepts_every_day_in_a_fifteen_day_trip(self):
+        start = date(2027, 4, 5)
+        itinerary = {"title": "Italy", "summary": "15-day draft", "days": [
+            {"date": (start + timedelta(days=index)).isoformat(), "city": "Rome", "activities": []}
+            for index in range(15)
+        ]}
+        response = {"choices": [{"message": {"content": json.dumps(itinerary)}}]}
+
+        class FakeResponse:
+            def __enter__(self): return self
+            def __exit__(self, *_): pass
+            def read(self, *_): return json.dumps(response).encode()
+
+        with tempfile.TemporaryDirectory() as folder:
+            key = Path(folder) / "key"
+            key.write_text("test-key")
+            with patch.object(app, "QUOTA", Path(folder) / "quota.json"), \
+                 patch.dict(app.os.environ, {"OPENROUTER_KEY_FILE": str(key)}), \
+                 patch.object(app, "urlopen", return_value=FakeResponse()):
+                result = app.plan({"prompt": "Plan Rome from April 5 through April 19, 2027"})
+
+        self.assertEqual(len(result["days"]), 15)
+        self.assertEqual(result["days"][0]["date"], "2027-04-05")
+        self.assertEqual(result["days"][-1]["date"], "2027-04-19")
 
 
 if __name__ == "__main__":
