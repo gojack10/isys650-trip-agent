@@ -1,6 +1,6 @@
 # ISYS 650 Trip Planning Agent
 
-This public portfolio project is the home for a five-person ISYS 650 group project: an AI trip-planning agent that parses vacation requests, asks for missing critical details, researches bounded travel information, and produces a linked, color-coded day-by-day itinerary with one supported revision.
+This public portfolio project is the home for a five-person ISYS 650 group project: an AI trip-planning agent that parses vacation requests, asks for missing critical details, researches bounded travel information, and produces a linked, color-coded day-by-day itinerary with continued revisions.
 
 ## Assignment and rubric scope
 
@@ -8,7 +8,7 @@ The draft targets the course assignment over the next few weeks by demonstrating
 
 ## Current status
 
-**Working code-first demo.** [Wanderplan](https://isys650.10server.net/) starts with an empty calendar. Ask Wanderbot uses OpenRouter web search to draft a three-day itinerary on it and accepts one revision; Reset demo clears the plan and chat. It is a rough planning demo, not a booking service. The old blank Langflow export in `flows/trip-agent.json` is historical, not the runtime.
+**Working code-first demo.** [Wanderplan](https://isys650.10server.net/) starts with an empty calendar. Ask Wanderbot uses OpenRouter web search to draft a three-day itinerary and accepts continued revisions to the current plan; Reset demo clears the plan and chat. Each draft or revision counts toward the global daily request cap. It is a rough planning demo, not a booking service. The old blank Langflow export in `flows/trip-agent.json` is historical, not the runtime.
 
 ## Prompting skill
 
