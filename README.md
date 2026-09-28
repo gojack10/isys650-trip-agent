@@ -22,4 +22,6 @@ Zack's first prompting checkpoint is documented in [`docs/prompting-checkpoint.m
 
 The skill is a research workflow and is not yet wired into the blank Langflow export. It does not book travel, enter credentials, or guarantee changing prices and availability.
 
-`AGENTS.md`, CI, and the executable Langflow implementation are intentionally not set up yet. They will be ideated separately.
+The [static trip-calendar demo](https://isys650.10server.net/) serves `docs/trip-calendar.html` from 10server.net. Every push to `main` validates and deploys that file through [GitHub Actions](.github/workflows/deploy.yml); the demo is public and has no password. It is a browser-only wireframe, not the Langflow agent or a booking service.
+
+`AGENTS.md` and the executable Langflow implementation are not set up yet.
