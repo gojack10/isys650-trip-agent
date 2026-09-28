@@ -1,6 +1,6 @@
 # ISYS 650 Trip Planning Agent
 
-This public portfolio project is the home for a five-person ISYS 650 group project: a Langflow AI trip-planning agent that parses vacation requests, asks for missing critical details, researches bounded travel information, and produces a linked, color-coded day-by-day itinerary with one supported revision.
+This public portfolio project is the home for a five-person ISYS 650 group project: an AI trip-planning agent that parses vacation requests, asks for missing critical details, researches bounded travel information, and produces a linked, color-coded day-by-day itinerary with one supported revision.
 
 ## Assignment and rubric scope
 
@@ -8,9 +8,7 @@ The draft targets the course assignment over the next few weeks by demonstrating
 
 ## Current status
 
-**Draft setup and role research.** A separate Langflow project (`trip-planning-agent`) and flow (`Trip Planning Agent — Draft`) were created. The flow is intentionally blank; implementation and validation are deferred.
-
-`flows/trip-agent.json` is the JSON export of that new Langflow flow. It is kept in Git so the team can review project history and import/export the flow through Langflow; the Langflow server is the runtime, not a substitute for this repository.
+**Working code-first demo.** [Wanderplan](https://isys650.10server.net/) starts with a hard-coded calendar example. Ask Wanderbot uses OpenRouter web search to draft a three-day itinerary on that calendar and accepts one revision; Reset demo restores the example. It is a rough planning demo, not a booking service. The old blank Langflow export in `flows/trip-agent.json` is historical, not the runtime.
 
 ## Prompting skill
 
@@ -20,8 +18,8 @@ Zack's first prompting checkpoint is documented in [`docs/prompting-checkpoint.m
 
 `skills/travel-browser-research/` contains the first data-and-tooling checkpoint: a Browser Harness workflow for researching an already-defined trip. It discovers candidates, verifies prices and restrictions on primary sources, and returns structured, source-backed data for the itinerary agent.
 
-The skill is a research workflow and is not yet wired into the blank Langflow export. It does not book travel, enter credentials, or guarantee changing prices and availability.
+The skill is a research workflow and is not yet wired into the deployed app. OpenRouter web search supplies discovery snippets instead; the app does not independently verify each result on a primary site. It does not book travel, enter credentials, or guarantee prices and availability.
 
-The [static trip-calendar demo](https://isys650.10server.net/) serves `docs/trip-calendar.html` from 10server.net. Every push to `main` validates and deploys that file through [GitHub Actions](.github/workflows/deploy.yml); the demo is public and has no password. It is a browser-only wireframe, not the Langflow agent or a booking service.
+Every push to `main` runs [tests and deploys](.github/workflows/deploy.yml) the Docker app on 10server.net. The server calls `deepseek/deepseek-v4.1-flash` through OpenRouter with high reasoning and its web-search plugin; no `max_tokens` value is set. The key lives only on the server. The public demo has no password but is globally capped at 20 planning requests per UTC day; don't use it for bookings or trust changing prices without checking linked sources. Browser Harness is **not** yet connected to the deployed agent.
 
-`AGENTS.md` and the executable Langflow implementation are not set up yet.
+Run tests locally with `uv run --no-project python -m unittest discover -s tests`. `AGENTS.md` is not set up yet.

@@ -1,0 +1,18 @@
+services:
+  web:
+    build: .
+    container_name: isys650-agent
+    restart: unless-stopped
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: [no-new-privileges:true]
+    environment:
+      QUOTA_FILE: /data/quota.json
+      UV_NO_CACHE: "1"
+    volumes:
+      - /home/jack/sites/isys650:/data
+      - /home/jack/sites/isys650/openrouter.key:/run/secrets/openrouter:ro
+    networks: [proxy-net]
+networks:
+  proxy-net:
+    external: true

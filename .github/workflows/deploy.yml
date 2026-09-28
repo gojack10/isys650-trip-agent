@@ -1,4 +1,4 @@
-name: Deploy static trip calendar
+name: Test and deploy trip agent
 
 on:
   push:
@@ -16,17 +16,17 @@ jobs:
       DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: main
-      - name: Validate and deploy HTML
+      - uses: astral-sh/setup-uv@v6
+      - name: Check planner
+        run: uv run --no-project python -m unittest discover -s tests
+      - name: Deploy on 10server
         shell: bash
         run: |
           set -euo pipefail
-          test -s docs/trip-calendar.html
-          grep -qi '<!doctype html>' docs/trip-calendar.html
           install -d -m 700 ~/.ssh
           printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/isys650_deploy
           chmod 600 ~/.ssh/isys650_deploy
           printf '%s\n' '[10server.net]:7232 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICYMw6R56/bFL0wKrDT/RipsV8tHnb20WDS0anF1uhH2' > ~/.ssh/known_hosts
-          ssh -T -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -i ~/.ssh/isys650_deploy -p 7232 jack@10server.net < docs/trip-calendar.html
-          curl -fsS --retry 5 --retry-delay 2 https://isys650.10server.net/ | cmp - docs/trip-calendar.html
+          ssh -T -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -i ~/.ssh/isys650_deploy -p 7232 jack@10server.net deploy "$GITHUB_SHA"
+          curl -fsS --retry 5 --retry-delay 2 https://isys650.10server.net/ -o /tmp/isys650.html
+          grep -q 'Ask Wanderbot' /tmp/isys650.html

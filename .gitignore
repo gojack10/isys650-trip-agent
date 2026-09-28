@@ -23,6 +23,8 @@ uploads/
 state/
 **/state/
 *.log
+__pycache__/
+*.pyc
 
 # Temporary export locations (ordinary JSON remains trackable)
 tmp/

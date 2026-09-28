@@ -487,27 +487,6 @@
     .message.bot { align-self: flex-start; border-bottom-left-radius: 4px; background: #fff; border: 1px solid var(--line); }
     .message.user { align-self: flex-end; border-bottom-right-radius: 4px; background: var(--green); color: #fff; }
 
-    .quick-prompts {
-      padding: 10px 14px 0;
-      display: flex;
-      gap: 7px;
-      overflow-x: auto;
-      background: var(--paper);
-    }
-
-    .quick-prompt {
-      flex: 0 0 auto;
-      min-height: 32px;
-      padding: 0 11px;
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      background: var(--paper);
-      color: var(--green);
-      cursor: pointer;
-      font-size: 11px;
-      font-weight: 700;
-    }
-
     .chat-form { padding: 11px 14px 14px; display: flex; gap: 8px; background: var(--paper); }
 
     .chat-input {
@@ -545,7 +524,7 @@
       .sidebar { display: none; }
       main { padding: 18px 14px 82px; }
       .topbar { align-items: flex-start; }
-      .top-actions .button:not(.primary) { display: none; }
+      .top-actions .button:not(.primary):not(#resetDemo) { display: none; }
       .calendar-toolbar { align-items: flex-start; flex-direction: column; }
       .legend { gap: 8px; }
       .day { height: 94px; padding: 7px; }
@@ -593,9 +572,10 @@
       <header class="topbar">
         <div class="trip-heading">
           <h1>Southern Europe</h1>
-          <p>April 5–19, 2027 · Janna’s spring trip</p>
+          <p id="tripDates">April 5–19, 2027 · Sample itinerary</p>
         </div>
         <div class="top-actions">
+          <button class="button" id="resetDemo">Reset demo</button>
           <button class="button" id="shareButton">Share</button>
           <button class="button primary" id="addButton">＋ Add activity</button>
         </div>
@@ -609,7 +589,7 @@
               <h2 id="monthTitle">April 2027</h2>
               <button class="button icon-button" id="nextMonth" aria-label="Next month">›</button>
             </div>
-            <div class="legend" aria-label="Destination colors">
+            <div class="legend" id="legend" aria-label="Destination colors">
               <span class="legend-item"><span class="legend-dot" style="background:var(--rome)"></span>Rome</span>
               <span class="legend-item"><span class="legend-dot" style="background:var(--florence)"></span>Florence</span>
               <span class="legend-item"><span class="legend-dot" style="background:var(--barcelona)"></span>Barcelona</span>
@@ -696,17 +676,11 @@
       <button class="chat-close" id="chatClose" aria-label="Close chat">×</button>
     </header>
     <div class="chat-messages" id="chatMessages" aria-live="polite">
-      <div class="message bot">Hi Janna! Select a day, then ask me to find an activity, recommend a restaurant, replace lodging, reschedule plans, or remove a cancelled reservation.</div>
-    </div>
-    <div class="quick-prompts" aria-label="Suggested requests">
-      <button class="quick-prompt" type="button">Find and add an activity</button>
-      <button class="quick-prompt" type="button">Recommend a restaurant</button>
-      <button class="quick-prompt" type="button">Find new lodging</button>
-      <button class="quick-prompt" type="button">My dinner reservation was cancelled</button>
+      <div class="message bot">Tell me your destination, travel dates, budget and interests. I’ll draft a three-day trip here and show it on the calendar. You can request one revision.</div>
     </div>
     <form class="chat-form" id="chatForm">
       <label class="sr-only" for="chatInput">Ask Wanderbot to edit the trip</label>
-      <input class="chat-input" id="chatInput" type="text" placeholder="Try: add lunch at 1 PM" autocomplete="off">
+      <input class="chat-input" id="chatInput" type="text" maxlength="1200" placeholder="Try: Rome, April 5–7, $600 for two" autocomplete="off">
       <button class="chat-send" type="submit">Send</button>
     </form>
   </section>
@@ -753,29 +727,6 @@
       ]
     };
 
-    const botSuggestions = {
-      Rome: {
-        activity: ['17:00', 'Centrale Montemartini', 'Hidden-gem museum suggested by Wanderbot', 'https://www.turismoroma.it/en/node/172773'],
-        restaurant: ['19:30', 'Dinner at La Buca Romana', 'Traditional Roman trattoria recommendation', 'https://www.turismoroma.it/it/tipologia-accoglienza-08/ristoranti'],
-        lodging: ['Hotel Campo de’ Fiori', 'Campo de’ Fiori · Wanderbot lodging match']
-      },
-      Florence: {
-        activity: ['16:30', 'Bardini Garden', 'Panoramic garden suggested by Wanderbot', 'https://www.feelflorence.it/en/points-interest/bardini-garden'],
-        restaurant: ['19:30', 'Dinner at Cibrèo Trattoria', 'Tuscan restaurant recommendation near Sant’Ambrogio', 'https://www.google.com/search?q=Cibreo+Trattoria+Florence'],
-        lodging: ['Hotel Spadai', 'Duomo district · Wanderbot lodging match']
-      },
-      Barcelona: {
-        activity: ['17:00', 'Sant Pau Art Nouveau Site', 'Modernist architecture suggested by Wanderbot', 'https://bid.barcelonaturisme.com/wv3/en/page/384/sant-pau-recinte-modernista.html'],
-        restaurant: ['20:30', 'Dinner at 1881 per Sagardi', 'Mediterranean restaurant recommendation by the harbor', 'https://www.barcelonaturisme.com/wv3/en/page/6/restaurants.html'],
-        lodging: ['Praktik Garden', 'Eixample · Wanderbot lodging match']
-      },
-      Lisbon: {
-        activity: ['16:30', 'Casa do Alentejo', 'Ornate cultural palace suggested by Wanderbot', 'https://www.visitlisboa.com/en/p/only-in-lisbon'],
-        restaurant: ['20:00', 'Dinner at Tavares', 'Historic Lisbon restaurant recommendation', 'https://www.visitlisboa.com/en/p/only-in-lisbon'],
-        lodging: ['Memmo Alfama', 'Alfama · Wanderbot lodging match']
-      }
-    };
-
     const calendarGrid = document.getElementById('calendarGrid');
     const monthTitle = document.getElementById('monthTitle');
     const detailEyebrow = document.getElementById('detailEyebrow');
@@ -789,58 +740,74 @@
     const localTip = document.getElementById('localTip');
     const exploreCity = document.getElementById('exploreCity');
     const recommendations = document.getElementById('recommendations');
-    let selectedDay = 6;
+    let currentMonth = new Date(2027, 3, 1);
+    let selectedKey = '2027-04-06';
+    let generatedDays = null;
+    let activePlan = null;
+    let revisions = 0;
+    let pendingRequest = '';
 
     const dayLabels = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const colors = { rome: 'var(--rome)', florence: 'var(--florence)', barcelona: 'var(--barcelona)', lisbon: 'var(--lisbon)' };
-
-    function shortEvent(event) {
-      return `${event[0]} · ${event[1]}`;
-    }
+    const palette = Object.keys(colors);
+    const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[char]));
+    const keyFor = date => `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(date).padStart(2, '0')}`;
+    const infoFor = date => generatedDays ? generatedDays[keyFor(date)] :
+      (currentMonth.getFullYear() === 2027 && currentMonth.getMonth() === 3 ? tripDays[date] : null);
 
     function renderCalendar() {
-      calendarGrid.innerHTML = '';
-      const cells = [28, 29, 30, 31, ...Array.from({length: 30}, (_, i) => i + 1), 1, 2, 3, 4, 5, 6, 7, 8];
-      cells.forEach((date, index) => {
-        const isApril = index >= 4 && index < 34;
-        const info = isApril ? tripDays[date] : null;
+      calendarGrid.replaceChildren();
+      monthTitle.textContent = currentMonth.toLocaleString('en-US', {month: 'long', year: 'numeric'});
+      const offset = currentMonth.getDay();
+      const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
+      for (let index = 0; index < 42; index++) {
+        const cell = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), index - offset + 1);
+        const inMonth = cell.getMonth() === currentMonth.getMonth();
+        const date = cell.getDate();
+        const info = inMonth ? infoFor(date) : null;
         const button = document.createElement('button');
-        button.className = `day${isApril ? '' : ' muted'}${info ? ` in-trip ${info.className}` : ''}${date === selectedDay && isApril ? ' selected' : ''}`;
+        button.className = `day${inMonth ? '' : ' muted'}${info ? ` in-trip ${info.className}` : ''}${info && keyFor(date) === selectedKey ? ' selected' : ''}`;
         button.type = 'button';
         button.disabled = !info;
-        button.setAttribute('aria-label', info ? `April ${date}, ${info.city}, ${info.events.length} activities` : `${isApril ? 'April' : index < 4 ? 'March' : 'May'} ${date}`);
-        button.innerHTML = `<span class="day-number">${date}</span>${info ? `<span class="location">${info.city}</span><span class="event-line">${shortEvent(info.events[0])}</span><span class="more">+${info.events.length - 1}</span>` : ''}`;
+        button.setAttribute('aria-label', info ? `${cell.toDateString()}, ${info.city}, ${info.events.length} activities` : cell.toDateString());
+        button.innerHTML = `<span class="day-number">${date}</span>${info ? `<span class="location">${escapeHtml(info.city)}</span><span class="event-line">${escapeHtml(info.events[0] ? `${info.events[0][0]} · ${info.events[0][1]}` : '')}</span><span class="more">+${Math.max(0, info.events.length - 1)}</span>` : ''}`;
         if (info) button.addEventListener('click', () => selectDay(date));
         calendarGrid.appendChild(button);
-      });
+      }
     }
 
     function placeLinks(event, city) {
       const placeQuery = encodeURIComponent(`${event[1]} ${event[2]} ${city}`);
       const directionsQuery = encodeURIComponent(`${event[1]}, ${city}`);
-      const detailsUrl = event[3] || `https://www.google.com/search?q=${placeQuery}`;
+      let detailsUrl = `https://www.google.com/search?q=${placeQuery}`;
+      try {
+        const source = new URL(event[3]);
+        if (['https:', 'http:'].includes(source.protocol)) detailsUrl = source.href;
+      } catch { /* No usable source link. */ }
       return `
         <div class="event-links">
-          <a href="${detailsUrl}" target="_blank" rel="noopener noreferrer" aria-label="Place information for ${event[1]}, opens in a new tab">Place info ↗</a>
-          <a href="https://www.google.com/maps/dir/?api=1&destination=${directionsQuery}" target="_blank" rel="noopener noreferrer" aria-label="Directions to ${event[1]}, opens in a new tab">Directions ↗</a>
+          <a href="${escapeHtml(detailsUrl)}" target="_blank" rel="noopener noreferrer" aria-label="Place information for ${escapeHtml(event[1])}, opens in a new tab">Place info ↗</a>
+          <a href="https://www.google.com/maps/dir/?api=1&destination=${directionsQuery}" target="_blank" rel="noopener noreferrer" aria-label="Directions to ${escapeHtml(event[1])}, opens in a new tab">Directions ↗</a>
         </div>`;
     }
 
     function selectDay(date) {
-      selectedDay = date;
-      const info = tripDays[date];
+      selectedKey = keyFor(date);
+      const info = infoFor(date);
       detailEyebrow.textContent = `Day ${info.day} · ${info.city}`;
-      const weekday = dayLabels[new Date(2027, 3, date).getDay()];
-      detailDate.textContent = `${weekday}, April ${date}`;
+      const day = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), date);
+      detailDate.textContent = `${dayLabels[day.getDay()]}, ${day.toLocaleString('en-US', {month:'long'})} ${date}`;
       detailWeather.textContent = info.weather;
       destinationStrip.style.background = colors[info.className];
       stayName.textContent = info.stay[0];
       stayMeta.textContent = info.stay[1];
+      stayDirections.hidden = !!generatedDays;
       stayDirections.href = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${info.stay[0]}, ${info.city}`)}`;
       stayDirections.setAttribute('aria-label', `Directions to ${info.stay[0]}, opens in a new tab`);
       localTip.textContent = info.tip;
+      document.getElementById('exploreSection').hidden = !!generatedDays;
       exploreCity.textContent = `${info.city} picks`;
-      recommendations.innerHTML = cityRecommendations[info.city].map(item => `
+      recommendations.innerHTML = generatedDays ? '' : cityRecommendations[info.city].map(item => `
         <a class="recommendation" href="${item.url}" target="_blank" rel="noopener noreferrer" aria-label="${item.type}: ${item.name}, opens in a new tab">
           <span>
             <span class="recommendation-type">${item.type}</span>
@@ -851,10 +818,28 @@
         </a>`).join('');
       timeline.innerHTML = info.events.map(event => `
         <div class="timeline-item">
-          <span class="time">${event[0]}</span>
-          <div class="timeline-body"><strong>${event[1]}</strong><span>${event[2]}</span>${placeLinks(event, info.city)}</div>
+          <span class="time">${escapeHtml(event[0])}</span>
+          <div class="timeline-body"><strong>${escapeHtml(event[1])}</strong><span>${escapeHtml(event[2])}</span>${placeLinks(event, info.city)}</div>
         </div>`).join('');
       renderCalendar();
+    }
+
+    function showPlan(plan) {
+      const cities = [...new Set(plan.days.map(day => day.city))];
+      generatedDays = Object.fromEntries(plan.days.map((day, index) => [day.date, {
+        city: day.city, day: index + 1, className: palette[cities.indexOf(day.city) % palette.length],
+        weather: 'Weather and availability not verified',
+        stay: ['Lodging not selected', 'Check prices and availability before booking'],
+        tip: 'Planning draft only. Verify prices, hours, transport and safety with primary sources.',
+        events: day.activities.map(item => [item.time, item.title, item.notes, item.url])
+      }]));
+      const [year, month, date] = plan.days[0].date.split('-').map(Number);
+      currentMonth = new Date(year, month - 1, 1);
+      document.querySelector('.trip-heading h1').textContent = plan.title;
+      document.getElementById('tripDates').textContent = `${plan.days[0].date} – ${plan.days[2].date} · AI draft, no bookings`;
+      document.querySelector('.sidebar-note').textContent = `${plan.days.length}-day draft · ${cities.join(' · ')}`;
+      document.getElementById('legend').innerHTML = cities.map((city, index) => `<span class="legend-item"><span class="legend-dot" style="background:${colors[palette[index % palette.length]]}"></span>${escapeHtml(city)}</span>`).join('');
+      selectDay(date);
     }
 
     const modalBackdrop = document.getElementById('modalBackdrop');
@@ -884,13 +869,14 @@
       setTimeout(() => toast.classList.remove('show'), 1800);
     });
 
-    ['previousMonth', 'nextMonth'].forEach(id => {
-      document.getElementById(id).addEventListener('click', () => {
-        const toast = document.getElementById('toast');
-        toast.textContent = 'This wireframe focuses on the April trip';
-        toast.classList.add('show');
-        setTimeout(() => { toast.classList.remove('show'); toast.textContent = 'Example activity saved'; }, 1800);
-      });
+    document.getElementById('resetDemo').addEventListener('click', () => location.reload());
+    document.getElementById('previousMonth').addEventListener('click', () => {
+      currentMonth.setMonth(currentMonth.getMonth() - 1);
+      renderCalendar();
+    });
+    document.getElementById('nextMonth').addEventListener('click', () => {
+      currentMonth.setMonth(currentMonth.getMonth() + 1);
+      renderCalendar();
     });
 
     document.querySelectorAll('.nav-item:not(.active):not(.explore-trigger), .mobile-bar button:not(.explore-trigger)').forEach(button => {
@@ -931,122 +917,48 @@
       chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
-    function timeFromRequest(request, fallback) {
-      const match = request.match(/(?:at|to)\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
-      if (!match) return fallback;
-      let hour = Number(match[1]);
-      const minute = match[2] || '00';
-      const period = (match[3] || '').toLowerCase();
-      if (period === 'pm' && hour < 12) hour += 12;
-      if (period === 'am' && hour === 12) hour = 0;
-      return `${String(hour).padStart(2, '0')}:${minute}`;
-    }
-
-    function sortEventsByTime(events) {
-      events.sort((a, b) => {
-        const [aHour, aMinute] = a[0].split(':').map(Number);
-        const [bHour, bMinute] = b[0].split(':').map(Number);
-        return (aHour * 60 + aMinute) - (bHour * 60 + bMinute);
-      });
-    }
-
-    function editTripWithBot(request) {
-      const text = request.toLowerCase();
-      const info = tripDays[selectedDay];
-      const dateLabel = `April ${selectedDay} in ${info.city}`;
-      const suggestions = botSuggestions[info.city];
-
-      if ((text.includes('find') || text.includes('recommend') || text.includes('suggest')) && text.includes('activity')) {
-        const activity = [...suggestions.activity];
-        if (info.events.some(event => event[1] === activity[1])) {
-          return `I already added “${activity[1]}” to ${dateLabel}. Try asking for a restaurant or a lighter day next.`;
-        }
-        info.events.push(activity);
-        sortEventsByTime(info.events);
-        selectDay(selectedDay);
-        return `I found “${activity[1]}” and added it at ${activity[0]} on ${dateLabel}. I included place information and directions.`;
-      }
-
-      if (text.includes('restaurant') || (text.includes('recommend') && (text.includes('dinner') || text.includes('food')))) {
-        const restaurant = [...suggestions.restaurant];
-        if (info.events.some(event => event[1] === restaurant[1])) {
-          return `“${restaurant[1]}” is already on ${dateLabel}. Its place and directions links are in the schedule.`;
-        }
-        info.events.push(restaurant);
-        sortEventsByTime(info.events);
-        selectDay(selectedDay);
-        return `I found ${restaurant[1].replace('Dinner at ', '')} and added it at ${restaurant[0]} on ${dateLabel}. You can open its details or directions from the schedule.`;
-      }
-
-      if (text.includes('lodging') || text.includes('hotel') || text.includes('accommodation')) {
-        const oldStay = info.stay[0];
-        info.stay = [...suggestions.lodging];
-        selectDay(selectedDay);
-        return `I replaced ${oldStay} with ${info.stay[0]} for ${info.city}. The stay card and directions link are updated.`;
-      }
-
-      if (text.includes('add') && (text.includes('free') || text.includes('break'))) {
-        const time = timeFromRequest(request, '16:00');
-        info.events.push([time, 'Free time', 'Added by Wanderbot · flexible plans']);
-        sortEventsByTime(info.events);
-        selectDay(selectedDay);
-        return `Done — I added free time at ${time} on ${dateLabel}. The calendar and schedule are updated.`;
-      }
-
-      if (text.includes('add') && text.includes('lunch')) {
-        const time = timeFromRequest(request, '13:00');
-        info.events.push([time, 'Lunch', 'New activity · restaurant to be chosen']);
-        sortEventsByTime(info.events);
-        selectDay(selectedDay);
-        return `Added lunch at ${time} on ${dateLabel}. I left the restaurant flexible for now.`;
-      }
-
-      if ((text.includes('move') || text.includes('reschedule')) && text.includes('dinner')) {
-        const dinner = info.events.find(event => event[1].toLowerCase().includes('dinner'));
-        const time = timeFromRequest(request, '20:30');
-        if (!dinner) return `I couldn't find a dinner on ${dateLabel}. Try “add dinner at 8:30 PM” instead.`;
-        const oldTime = dinner[0];
-        dinner[0] = time;
-        sortEventsByTime(info.events);
-        selectDay(selectedDay);
-        return `Done — I moved ${dinner[1].toLowerCase()} from ${oldTime} to ${time} on ${dateLabel}.`;
-      }
-
-      if (text.includes('remove') || text.includes('cancelled') || text.includes('canceled') || text.includes('cancel')) {
-        const meaningfulWords = text.split(/[^a-zà-ÿ]+/).filter(word => word.length > 4 && !['reservation', 'cancelled', 'canceled', 'remove', 'activity'].includes(word));
-        let activity = info.events.find(event => {
-          const eventText = `${event[1]} ${event[2]}`.toLowerCase();
-          return meaningfulWords.some(word => eventText.includes(word));
-        });
-        if (!activity && text.includes('dinner')) activity = info.events.find(event => event[1].toLowerCase().includes('dinner'));
-        if (!activity && (text.includes('reservation') || text.includes('cancel'))) {
-          activity = info.events.find(event => /reserved|reservation|timed entry|confirmation saved/i.test(`${event[1]} ${event[2]}`));
-        }
-        if (!activity) return `I couldn't match that cancellation to ${dateLabel}. Tell me the activity name, for example “remove Park Güell.”`;
-        info.events = info.events.filter(event => event !== activity);
-        selectDay(selectedDay);
-        return `I removed the cancelled reservation “${activity[1]}” from ${dateLabel}. The calendar and activity count are updated.`;
-      }
-
-      if (text.includes('lighter') || text.includes('too busy') || text.includes('relax')) {
-        const lastFlexible = [...info.events].reverse().find(event => !/flight|train|check|reserved|timed/i.test(`${event[1]} ${event[2]}`));
-        if (!lastFlexible) return `${dateLabel} is already focused on essential reservations and travel. I’d keep it as planned.`;
-        return `For a lighter ${dateLabel}, I suggest removing “${lastFlexible[1]}” at ${lastFlexible[0]}. Say “remove ${lastFlexible[1]}” and I’ll update it.`;
-      }
-
-      if (text.includes('help') || text.includes('what can')) {
-        return 'I can find and add an activity, recommend a restaurant, replace lodging, add lunch or free time, move dinner, or remove a cancelled reservation. Select a calendar day first so I know what to edit.';
-      }
-
-      return `I can help with that. Try “find an activity,” “recommend a restaurant,” “find new lodging,” or “my ${info.events[0][1]} reservation was cancelled.”`;
-    }
-
-    function submitChat(request) {
+    async function submitChat(request) {
       const cleanRequest = request.trim();
       if (!cleanRequest) return;
+      if (revisions) {
+        addMessage('One revision is supported in this demo. Use Reset demo to start over.', 'bot');
+        return;
+      }
       addMessage(cleanRequest, 'user');
       chatInput.value = '';
-      setTimeout(() => addMessage(editTripWithBot(cleanRequest), 'bot'), 260);
+      chatInput.disabled = true;
+      document.querySelector('.chat-send').disabled = true;
+      const loading = document.createElement('div');
+      loading.className = 'message bot';
+      loading.textContent = 'Researching and planning…';
+      chatMessages.append(loading);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+      try {
+        const response = await fetch('/api/plan', {
+          method: 'POST', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({prompt: pendingRequest ? `${pendingRequest}\nAdditional detail: ${cleanRequest}` : cleanRequest, previous: activePlan})
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Planning failed.');
+        if (result.question) {
+          pendingRequest = pendingRequest ? `${pendingRequest}\nAdditional detail: ${cleanRequest}` : cleanRequest;
+          addMessage(result.question, 'bot');
+        } else {
+          if (activePlan) revisions++;
+          activePlan = result;
+          pendingRequest = '';
+          showPlan(result);
+          addMessage(`${result.title}\n${result.summary || ''}\nThe three-day draft is on the calendar. ${revisions ? 'Use Reset demo for another trip.' : 'You can request one revision.'} Prices, hours and availability are unverified; check the linked sources.`, 'bot');
+        }
+      } catch (error) {
+        addMessage(error.message, 'bot');
+      } finally {
+        loading.remove();
+        chatInput.disabled = false;
+        document.querySelector('.chat-send').disabled = false;
+        chatInput.placeholder = activePlan ? 'Ask for one revision' : 'Destination, dates, budget and interests';
+        chatInput.focus();
+      }
     }
 
     chatLauncher.addEventListener('click', () => setChat(true));
@@ -1055,11 +967,7 @@
       event.preventDefault();
       submitChat(chatInput.value);
     });
-    document.querySelectorAll('.quick-prompt').forEach(button => {
-      button.addEventListener('click', () => submitChat(button.textContent));
-    });
-
-    selectDay(selectedDay);
+    selectDay(6);
   </script>
 </body>
 </html>

@@ -1,6 +1,6 @@
 # Trip Planning Agent Design (Draft)
 
-> This is a draft for the ISYS 650 group project. It describes the supplied first-pass idea without selecting a destination or promising live integrations.
+> Historical Langflow draft. The current code-first deployed demo is described in the repository README; this page records the original scope, not verified runtime behavior.
 
 ## First-pass behavior
 
