@@ -668,7 +668,7 @@
       <button class="chat-close" id="chatClose" aria-label="Close chat">×</button>
     </header>
     <div class="chat-messages" id="chatMessages" aria-live="polite">
-      <div class="message bot">Tell me your destination, travel dates, budget and interests. I’ll draft a three-day trip here and show it on the calendar. You can request one revision.</div>
+      <div class="message bot">Tell me your destination, travel dates, budget and interests. I’ll draft a three-day trip here and show it on the calendar. You can keep revising the current trip.</div>
     </div>
     <form class="chat-form" id="chatForm">
       <label class="sr-only" for="chatInput">Ask Wanderbot to edit the trip</label>
@@ -737,7 +737,6 @@
     let selectedKey = '';
     let generatedDays = {};
     let activePlan = null;
-    let revisions = 0;
     let pendingRequest = '';
 
     const dayLabels = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -913,10 +912,6 @@
     async function submitChat(request) {
       const cleanRequest = request.trim();
       if (!cleanRequest) return;
-      if (revisions) {
-        addMessage('One revision is supported in this demo. Use Reset demo to start over.', 'bot');
-        return;
-      }
       addMessage(cleanRequest, 'user');
       chatInput.value = '';
       chatInput.disabled = true;
@@ -937,11 +932,10 @@
           pendingRequest = pendingRequest ? `${pendingRequest}\nAdditional detail: ${cleanRequest}` : cleanRequest;
           addMessage(result.question, 'bot');
         } else {
-          if (activePlan) revisions++;
           activePlan = result;
           pendingRequest = '';
           showPlan(result);
-          addMessage(`${result.title}\n${result.summary || ''}\nThe three-day draft is on the calendar. ${revisions ? 'Use Reset demo for another trip.' : 'You can request one revision.'} Prices, hours and availability are unverified; check the linked sources.`, 'bot');
+          addMessage(`${result.title}\n${result.summary || ''}\nThe three-day draft is on the calendar. You can keep revising this trip, or use Reset demo to start over. Prices, hours and availability are unverified; check the linked sources.`, 'bot');
         }
       } catch (error) {
         addMessage(error.message, 'bot');
@@ -949,7 +943,7 @@
         loading.remove();
         chatInput.disabled = false;
         document.querySelector('.chat-send').disabled = false;
-        chatInput.placeholder = activePlan ? 'Ask for one revision' : 'Destination, dates, budget and interests';
+        chatInput.placeholder = activePlan ? 'Ask for another revision' : 'Destination, dates, budget and interests';
         chatInput.focus();
       }
     }
