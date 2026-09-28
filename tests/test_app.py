@@ -1,5 +1,7 @@
 import json
+import http.client
 import tempfile
+import threading
 import unittest
 from datetime import date, timedelta
 from pathlib import Path
@@ -9,6 +11,31 @@ import app
 
 
 class PlannerTest(unittest.TestCase):
+    def test_api_validation_errors_are_json(self):
+        server = app.ThreadingHTTPServer(("127.0.0.1", 0), app.Handler)
+        thread = threading.Thread(target=server.handle_request)
+        thread.start()
+        try:
+            connection = http.client.HTTPConnection("127.0.0.1", server.server_port)
+            connection.request("POST", "/api/plan", "{}", {"Content-Type": "text/plain"})
+            response = connection.getresponse()
+            data = json.loads(response.read())
+            connection.close()
+        finally:
+            thread.join(timeout=2)
+            server.server_close()
+
+        self.assertEqual(response.status, 415)
+        self.assertIn("application/json", response.getheader("Content-Type"))
+        self.assertIn("application/json", data["error"])
+
+    def test_calendar_handles_non_json_responses_and_refreshes(self):
+        calendar = (app.ROOT / "docs/trip-calendar.html").read_text()
+        self.assertIn("const responseBody = await response.text()", calendar)
+        self.assertIn("result = JSON.parse(responseBody)", calendar)
+        self.assertIn("Refreshing your trip with the new details", calendar)
+        self.assertIn("selectedKey = '';", calendar)
+
     def test_accepts_thirty_day_plan_without_daily_limit(self):
         itinerary = {"title": "Rome", "summary": "Estimates only", "days": [
             {"date": f"2027-01-{i:02d}", "city": "Rome", "activities": []} for i in range(1, 31)
