@@ -82,6 +82,15 @@ def plan(request):
 
 
 class Handler(BaseHTTPRequestHandler):
+    def send_json(self, status, data):
+        body = json.dumps(data, ensure_ascii=False).encode()
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
     def do_GET(self):
         path = {"/": "docs/trip-calendar.html"}.get(self.path)
         if not path:
@@ -95,8 +104,11 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(content)
 
     def do_POST(self):
-        if self.path != "/api/plan" or self.headers.get("Content-Type", "").split(";")[0] != "application/json":
+        if self.path != "/api/plan":
             self.send_error(404)
+            return
+        if self.headers.get("Content-Type", "").split(";")[0] != "application/json":
+            self.send_json(415, {"error": "Send the request as application/json."})
             return
         try:
             size = int(self.headers.get("Content-Length", "0"))
@@ -108,13 +120,7 @@ class Handler(BaseHTTPRequestHandler):
             status, data = 400, {"error": str(exc)}
         except Exception:
             status, data = 502, {"error": "The planner is unavailable. Try again shortly."}
-        body = json.dumps(data, ensure_ascii=False).encode()
-        self.send_response(status)
-        self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Cache-Control", "no-store")
-        self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
+        self.send_json(status, data)
 
 
 if __name__ == "__main__":
