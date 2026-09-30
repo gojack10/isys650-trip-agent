@@ -7,7 +7,6 @@ import time
 import unittest
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from types import SimpleNamespace
 from unittest.mock import patch
 
 import app
@@ -95,17 +94,19 @@ class PlannerTest(unittest.TestCase):
         self.assertIn("item.id === day.lodging_id", calendar)
         self.assertIn("filter(item => item.selected)", calendar)
         self.assertIn("openBookings", calendar)
-        self.assertIn("Browsing current flights, stays and destination sources", calendar)
+        self.assertIn("createProgressCard", calendar)
+        self.assertIn("No new activity for", calendar)
+        self.assertIn("delete result.progress", calendar)
 
     def test_plan_preloads_prepared_contract_and_separates_user_data(self):
         result = itinerary()
-        completed = SimpleNamespace(returncode=0, stdout=json.dumps(result), stderr="")
+        events = [{"type": "message_end", "message": {"role": "assistant", "stopReason": "stop", "content": [{"type": "text", "text": json.dumps(result)}]}}]
 
         with tempfile.TemporaryDirectory() as folder:
             key = Path(folder) / "key"
             key.write_text("test-key")
             with patch.dict(app.os.environ, {"OPENROUTER_KEY_FILE": str(key)}), \
-                 patch.object(app.subprocess, "run", return_value=completed) as runner:
+                 patch.object(app, "pi_events", return_value=iter(events)) as runner:
                 self.assertEqual(app.plan({"prompt": "Los Angeles April 5–7, 2027"}), result)
 
         command = runner.call_args.args[0]
@@ -119,7 +120,7 @@ class PlannerTest(unittest.TestCase):
         self.assertEqual(app.SYSTEM_PROMPT.read_text(), prepare_agent.build_prompt())
         self.assertNotIn("<spec", command[-1])
         self.assertIn("read,bash", command)
-        self.assertNotIn("--mode", command)
+        self.assertEqual(command[command.index("--mode") + 1], "json")
         self.assertEqual(runner.call_args.kwargs["env"]["OPENROUTER_API_KEY"], "test-key")
         self.assertEqual(runner.call_args.kwargs["timeout"], 420)
 
@@ -127,15 +128,12 @@ class PlannerTest(unittest.TestCase):
         first = itinerary()
         second = itinerary()
         second["summary"] = "More museums"
-        replies = [
-            SimpleNamespace(returncode=0, stdout=json.dumps(first), stderr=""),
-            SimpleNamespace(returncode=0, stdout=json.dumps(second), stderr=""),
-        ]
+        replies = [[{"type": "message_end", "message": {"role": "assistant", "stopReason": "stop", "content": [{"type": "text", "text": json.dumps(result)}]}}] for result in (first, second)]
         with tempfile.TemporaryDirectory() as folder:
             key = Path(folder) / "key"
             key.write_text("test-key")
             with patch.dict(app.os.environ, {"OPENROUTER_KEY_FILE": str(key)}), \
-                 patch.object(app.subprocess, "run", side_effect=replies) as runner:
+                 patch.object(app, "pi_events", side_effect=replies) as runner:
                 current = app.plan({"prompt": "Los Angeles April 5–7, 2027"})
                 app.plan({"prompt": "Add more museums", "previous": current})
 
@@ -155,6 +153,15 @@ class PlannerTest(unittest.TestCase):
         self.assertEqual(prompt, prepare_agent.build_prompt())
         with self.assertRaises(ValueError):
             prepare_agent.render_nodes([])
+
+    def test_fast_path_keeps_multileg_evidence_and_stop_boundaries(self):
+        prompt = app.SYSTEM_PROMPT.read_text()
+        self.assertIn("successive statements in ONE Browser Harness stdin script", prompt)
+        self.assertIn("Perform dependent actions in sequence **only after verifying each prior state**", prompt)
+        self.assertIn("round trip\" fare does not establish the return carrier", prompt)
+        self.assertIn("Otherwise leave the return unselected", prompt)
+        self.assertIn("Never include an unavailable/null line and still present complete numeric totals", prompt)
+        self.assertIn("try one suitable alternative", prompt)
 
     def test_exploration_and_partial_do_not_need_fabricated_dates(self):
         for status in ("exploring", "partial"):

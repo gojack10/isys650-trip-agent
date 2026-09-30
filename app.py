@@ -3,9 +3,12 @@ import json
 import math
 import os
 import secrets
+import selectors
+import signal
 import subprocess
 import sys
 import threading
+import time
 from datetime import date, datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -17,6 +20,15 @@ SYSTEM_PROMPT = ROOT / "agent/prompt.md"
 JOBS = {}
 JOBS_LOCK = threading.Lock()
 ACTIVE_JOB = None
+PROGRESS_STEPS = {
+    "understanding": "Reviewing your request",
+    "exploring": "Comparing trip options",
+    "transport": "Checking transport options",
+    "lodging": "Checking hotel options",
+    "activities": "Researching activities and local advice",
+    "budget": "Building the budget",
+    "review": "Checking the itinerary",
+}
 
 
 def validate_request(request):
@@ -206,7 +218,124 @@ def validate_result(result):
     return result
 
 
-def plan(request):
+def pi_events(command, *, env, timeout):
+    """Consume JSONL without pipe deadlocks; EOF + successful process exit owns completion."""
+    deadline = time.monotonic() + timeout
+    # No raw stderr or event contents are exposed to users or persisted by default.
+    with subprocess.Popen(command, cwd=ROOT, env=env, stdin=subprocess.DEVNULL,
+                          stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                          start_new_session=True) as process:
+        try:
+            pending = b""
+            with selectors.DefaultSelector() as selector:
+                selector.register(process.stdout, selectors.EVENT_READ)
+                while True:
+                    remaining = deadline - time.monotonic()
+                    if remaining <= 0 or not selector.select(remaining):
+                        raise TimeoutError("Planning agent timed out.")
+                    chunk = os.read(process.stdout.fileno(), 65536)
+                    if not chunk:
+                        if pending.strip():
+                            raise RuntimeError("Incomplete agent event stream.")
+                        break
+                    pending += chunk
+                    while b"\n" in pending:
+                        line, pending = pending.split(b"\n", 1)
+                        if line.strip():
+                            event = json.loads(line)
+                            if not isinstance(event, dict):
+                                raise RuntimeError("Invalid agent event.")
+                            yield event
+                    if len(pending) > 2_000_000:
+                        raise RuntimeError("Agent event exceeds the supported size.")
+            if process.wait(timeout=max(0.001, deadline - time.monotonic())):
+                raise RuntimeError("Planning agent failed.")
+        except subprocess.TimeoutExpired as exc:
+            raise TimeoutError("Planning agent timed out.") from exc
+        finally:
+            if process.poll() is None:
+                try:
+                    os.killpg(process.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+                process.wait()
+
+
+def message_json(message):
+    text = "\n".join(part["text"] for part in message.get("content", []) if part.get("type") == "text").strip()
+    # Some models fence an otherwise pure JSON answer. Do not salvage JSON from prose.
+    if text.startswith("```json\n") and text.endswith("\n```"):
+        text = text[len("```json\n"):-len("\n```")].strip()
+    return json.loads(text)
+
+
+def update_progress(job_id, event):
+    kind = event.get("type")
+    if kind not in {"agent_start", "message_start", "message_update", "message_end",
+                    "tool_execution_start", "tool_execution_update", "tool_execution_end",
+                    "auto_retry_start", "auto_retry_end"}:
+        return
+    with JOBS_LOCK:
+        job = JOBS[job_id]
+        if job["status"] != "researching":
+            return
+        now = time.monotonic()
+        job["last_activity"] = now
+        if job["current"]["title"] == "Starting planner":
+            job["current"]["title"] = "Working on your request"
+        if kind.startswith("tool_execution"):
+            job["activity"] = "tool"
+        elif kind == "auto_retry_start":
+            job["activity"] = "retry"
+        elif kind in {"message_start", "message_update", "message_end", "auto_retry_end"}:
+            job["activity"] = "model"
+        if kind != "tool_execution_start" or event.get("toolName") != "bash":
+            return
+        command = event.get("args", {}).get("command", "")
+        if not isinstance(command, str):
+            return
+        header = command.partition("\n")[0]
+        prefix = "# wanderplan-progress: "
+        if not header.startswith(prefix):
+            return
+        try:
+            update = json.loads(header[len(prefix):])
+        except ValueError:
+            return
+        if not isinstance(update, dict) or set(update) != {"step", "state", "next"}:
+            return
+        step, state, following = update["step"], update["state"], update["next"]
+        if (not isinstance(step, str) or step not in PROGRESS_STEPS
+                or state not in ("working", "blocked")
+                or (following is not None and (not isinstance(following, str) or following not in PROGRESS_STEPS))):
+            return
+        title = PROGRESS_STEPS[step]
+        if state == "blocked":
+            title += " — some evidence is unavailable"
+        current = {"title": title, "next": PROGRESS_STEPS.get(following), "state": state}
+        if current != job["current"]:
+            job["current"] = current
+            job["stage_at"] = now
+            job["history"].append({"elapsed_seconds": int(now - job["started"]), "title": title})
+            job["history"] = job["history"][-6:]
+
+
+def progress_snapshot(job):
+    now = job.get("finished", time.monotonic())
+    current = job["current"]
+    # A task label is self-reported intent, not a durable claim about current work.
+    if job["status"] == "researching" and job["stage_at"] is not None and now - job["stage_at"] > 60:
+        current = {"title": "Continuing research", "next": None, "state": "working"}
+    return {
+        **current,
+        "elapsed_seconds": max(0, int(now - job["started"])),
+        "quiet_seconds": None if job["last_activity"] is None else max(0, int(now - job["last_activity"])),
+        "activity": job["activity"],
+        "history": list(job["history"]),
+    }
+
+
+def plan(request, on_event=None):
     request = validate_request(request)
     key = Path(os.getenv("OPENROUTER_KEY_FILE", "/run/secrets/openrouter")).read_text().strip()
     env = os.environ.copy()
@@ -219,37 +348,22 @@ def plan(request):
     Path(env["HOME"]).mkdir(parents=True, exist_ok=True)
     timeout = int(os.getenv("AGENT_TIMEOUT_SECONDS", "420"))
     command = [
-        "pi", "--print", "--no-session", "--no-extensions", "--no-skills",
+        "pi", "--mode", "json", "--no-session", "--no-extensions", "--no-skills",
         "--no-prompt-templates", "--no-themes", "--no-context-files", "--tools", "read,bash",
         "--provider", "openrouter", "--model", MODEL, "--thinking", "low",
         "--system-prompt", str(SYSTEM_PROMPT), agent_prompt(request, timeout),
     ]
+    last_message = None
+    for event in pi_events(command, env=env, timeout=timeout):
+        if on_event:
+            on_event(event)
+        if event.get("type") == "message_end" and event.get("message", {}).get("role") == "assistant":
+            last_message = event["message"]
+    # Pinned Pi can exit 0 after a provider error. Never reuse an earlier successful message.
+    if not last_message or last_message.get("stopReason") != "stop":
+        raise RuntimeError("The planner stopped before finishing its response.")
     try:
-        completed = subprocess.run(
-            command,
-            cwd=ROOT,
-            env=env,
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-        )
-    except subprocess.TimeoutExpired as exc:
-        raise RuntimeError("Planning agent timed out.") from exc
-    if completed.returncode:
-        raise RuntimeError("Planning agent failed.")
-    output = completed.stdout.strip()
-    try:
-        result = json.loads(output)
-    except json.JSONDecodeError:
-        start, end = output.find("{"), output.rfind("}") + 1
-        if start < 0 or end <= start:
-            raise RuntimeError("The planner returned an incomplete itinerary.")
-        try:
-            result = json.loads(output[start:end])
-        except json.JSONDecodeError as exc:
-            raise RuntimeError("The planner returned an incomplete itinerary.") from exc
-    try:
-        return validate_result(result)
+        return validate_result(message_json(last_message))
     except (KeyError, TypeError, ValueError) as exc:
         raise RuntimeError("The planner returned an incomplete itinerary.") from exc
 
@@ -257,12 +371,14 @@ def plan(request):
 def run_job(job_id, request):
     global ACTIVE_JOB
     try:
-        result, error = plan(request), None
+        result, error = plan(request, lambda event: update_progress(job_id, event)), None
+    except TimeoutError:
+        result, error = None, "Research reached its time limit. Try a narrower request."
     except Exception as exc:
         print(f"Planner job {job_id} failed: {exc}", file=sys.stderr, flush=True)
         result, error = None, "The planner is unavailable. Try again shortly."
     with JOBS_LOCK:
-        JOBS[job_id] = {"status": "failed" if error else "complete", "result": result, "error": error}
+        JOBS[job_id].update(status="failed" if error else "complete", result=result, error=error, finished=time.monotonic())
         ACTIVE_JOB = None
 
 
@@ -275,7 +391,12 @@ def launch_job(request):
             raise RuntimeError("Wanderbot is researching another trip. Try again shortly.")
         job_id = secrets.token_urlsafe(12)
         ACTIVE_JOB = job_id
-        JOBS[job_id] = {"status": "researching", "result": None, "error": None}
+        JOBS[job_id] = {
+            "status": "researching", "result": None, "error": None,
+            "started": time.monotonic(), "last_activity": None, "stage_at": None, "activity": "starting",
+            "current": {"title": "Starting planner", "next": None, "state": "working"},
+            "history": [],
+        }
         finished = [key for key, value in JOBS.items() if value["status"] != "researching" and key != job_id]
         for key in finished[:-20]:
             JOBS.pop(key, None)
@@ -306,14 +427,15 @@ class Handler(BaseHTTPRequestHandler):
             job_id = self.path.removeprefix("/api/plan/")
             with JOBS_LOCK:
                 job = JOBS.get(job_id)
+                progress = progress_snapshot(job) if job else None
             if not job:
                 self.send_json(404, {"error": "Planning job not found."})
             elif job["status"] == "researching":
-                self.send_json(202, {"status": "researching"})
+                self.send_json(202, {"status": "researching", "progress": progress})
             elif job["error"]:
-                self.send_json(502, {"error": job["error"]})
+                self.send_json(502, {"error": job["error"], "progress": progress})
             else:
-                self.send_json(200, job["result"])
+                self.send_json(200, {**job["result"], "progress": progress})
             return
         self.send_error(404)
 

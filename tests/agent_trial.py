@@ -4,39 +4,36 @@ Inside the test image: uv run --no-project python /tmp/agent_trial.py /tmp/evide
 Saves real Pi JSONL events and validated results. Requires the server's test key.
 """
 import json
-import subprocess
 import sys
 from pathlib import Path
 
 import app
 
 
+def recorded_events_log(path):
+    return (json.loads(line) for line in path.read_text().splitlines() if line.strip())
+
+
 def main():
     output = Path(sys.argv[1])
     output.mkdir(parents=True, exist_ok=True)
-    native_run = subprocess.run
+    native_events = app.pi_events
     scenario = ""
     events = []
 
-    def recorded_run(command, **kwargs):
-        # Same app.plan path and prepared prompt; JSON mode is trial instrumentation only.
-        command = [*command[:-1], "--mode", "json", command[-1]]
+    def recorded_events(command, **kwargs):
         (output / f"{scenario}.request.json").write_text(command[-1])
-        kwargs.pop("capture_output")
-        trace = output / f"{scenario}.jsonl"
-        errors = output / f"{scenario}.stderr"
-        # Stream to files so a timeout still leaves the actual partial evidence.
-        with trace.open("w") as stdout, errors.open("w") as stderr:
-            completed = native_run(command, stdout=stdout, stderr=stderr, **kwargs)
-        events[:] = [json.loads(line) for line in trace.read_text().splitlines() if line.strip()]
-        messages = [event["message"] for event in events if event.get("type") == "message_end"
-                    and event.get("message", {}).get("role") == "assistant"]
-        if not messages or messages[-1].get("stopReason") in {"error", "aborted"}:
-            raise RuntimeError("Live agent did not finish successfully; inspect saved events")
-        text = "\n".join(part["text"] for part in messages[-1]["content"] if part["type"] == "text")
-        return subprocess.CompletedProcess(command, completed.returncode, text, errors.read_text())
+        events.clear()
+        # Observe the real runner; do not replace its framing, timeouts or final-message checks.
+        with (output / f"{scenario}.jsonl").open("w") as trace:
+            for event in native_events(command, **kwargs):
+                trace.write(json.dumps(event) + "\n")
+                trace.flush()
+                if event.get("type") == "tool_execution_start":
+                    events.append(event)
+                yield event
 
-    app.subprocess.run = recorded_run
+    app.pi_events = recorded_events
     previous = None
     cases = [
         ("clarification", "Help me plan a trip."),
@@ -71,6 +68,14 @@ def main():
             assert browsing and result["sources"], "Need observed browser work and evidence"
             assert [day["date"] for day in result["days"]] == ["2026-10-15", "2026-10-16", "2026-10-17"]
             assert result["budget"] and result["budget"]["savings"], "Need budget and savings"
+            observed = '\n'.join(part.get('text', '') for event in recorded_events_log(output / f'{scenario}.jsonl')
+                                 if event.get('type') == 'tool_execution_end'
+                                 for part in event.get('result', {}).get('content', []) if part.get('type') == 'text')
+            for item in [*result['flights'], *result['lodging']]:
+                if item['selected'] and item['source_url']:
+                    assert item['source_url'] in observed, 'Selected travel link must match an observed browser URL'
+                if item['checked_at']:
+                    assert item['checked_at'] in observed, 'Evidence timestamp must be observed, not guessed'
             previous = result
         elif scenario == "uncertainty":
             assert not browsing and result["status"] == "partial", "Unknown required evidence must not become complete"

@@ -489,6 +489,12 @@
 
     .message.bot { align-self: flex-start; border-bottom-left-radius: 4px; background: #fff; border: 1px solid var(--line); }
     .message.user { align-self: flex-end; border-bottom-right-radius: 4px; background: var(--green); color: #fff; }
+    .progress-card { width: 100%; max-width: 100%; white-space: normal; }
+    .progress-title { display: block; }
+    .progress-meta, .progress-next, .progress-note { color: var(--muted); font-size: 11px; margin-top: 5px; }
+    .progress-card details { margin-top: 8px; font-size: 11px; }
+    .progress-card summary { cursor: pointer; color: var(--green); }
+    .progress-card ol { padding-left: 18px; margin: 8px 0; }
 
     .chat-form { padding: 11px 14px 14px; display: flex; gap: 8px; background: var(--paper); }
 
@@ -990,7 +996,67 @@
       chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
-    async function readPlanResponse(response) {
+    function createProgressCard() {
+      const card = document.createElement('div');
+      card.className = 'message bot progress-card';
+      // Clock ticks must not trigger the chat's live region every second.
+      card.setAttribute('aria-live', 'off');
+      card.innerHTML = '<strong class="progress-title" role="status" aria-live="polite">Starting planner</strong><div class="progress-meta"></div><div class="progress-next" hidden></div><details><summary>Activity details</summary><p class="progress-note">Task summaries are agent-reported. Activity timestamps come from observed events, not proof that research succeeded.</p><ol></ol></details>';
+      const title = card.querySelector('.progress-title');
+      const meta = card.querySelector('.progress-meta');
+      const next = card.querySelector('.progress-next');
+      const history = card.querySelector('ol');
+      let snapshot = {title: 'Starting planner', elapsed_seconds: 0, quiet_seconds: null, activity: 'starting', history: []};
+      let receivedAt = performance.now();
+      let running = true;
+      let historyKey = '';
+      const duration = seconds => `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
+      function render() {
+        const since = running ? Math.floor((performance.now() - receivedAt) / 1000) : 0;
+        const quiet = snapshot.quiet_seconds == null ? null : snapshot.quiet_seconds + since;
+        let activity = quiet == null ? 'Waiting for agent activity' : `Last activity ${quiet}s ago`;
+        if (quiet != null && quiet >= 45) activity = `No new activity for ${duration(quiet)}; still waiting`;
+        if (snapshot.activity === 'retry') activity = 'Model provider retrying';
+        meta.textContent = `${duration(snapshot.elapsed_seconds + since)} elapsed${running ? ` · ${activity}` : ''}`;
+      }
+      chatMessages.append(card);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+      render();
+      const timer = setInterval(render, 1000);
+      return {
+        update(value) {
+          if (!value || !running) return;
+          snapshot = value;
+          receivedAt = performance.now();
+          const label = value.activity === 'retry' ? 'Waiting for the model provider' : value.title;
+          if (title.textContent !== label) title.textContent = label;
+          next.hidden = !value.next;
+          next.textContent = value.next ? `Next: ${value.next}` : '';
+          const key = JSON.stringify(value.history);
+          if (key !== historyKey) {
+            historyKey = key;
+            history.replaceChildren(...value.history.map(item => {
+              const row = document.createElement('li');
+              row.textContent = `${duration(item.elapsed_seconds)} · ${item.title}`;
+              return row;
+            }));
+          }
+          render();
+        },
+        finish(label) {
+          if (!running) return;
+          snapshot.elapsed_seconds += Math.floor((performance.now() - receivedAt) / 1000);
+          running = false;
+          clearInterval(timer);
+          title.textContent = label;
+          next.hidden = true;
+          card.dataset.finished = 'true';
+          render();
+        }
+      };
+    }
+
+    async function readPlanResponse(response, onProgress = () => {}) {
       const responseBody = await response.text();
       let result;
       try {
@@ -1001,25 +1067,28 @@
           : 'The planning service returned an unexpected response. Please try again shortly.';
         throw new Error(message);
       }
+      onProgress(result.progress);
+      delete result.progress;
       if (!response.ok) throw new Error(result.error || `Planning failed (${response.status}).`);
       return result;
     }
 
-    async function requestPlan(payload) {
+    async function requestPlan(payload, onProgress) {
       const started = await fetch('/api/plan', {
         method: 'POST',
         headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
         cache: 'no-store',
         body: JSON.stringify(payload)
       });
-      const job = await readPlanResponse(started);
+      const job = await readPlanResponse(started, onProgress);
       if (started.status !== 202 || !job.job_id) return job;
       const deadline = Date.now() + 8 * 60 * 1000;
       while (Date.now() < deadline) {
         await new Promise(resolve => setTimeout(resolve, 2000));
         const response = await fetch(`/api/plan/${encodeURIComponent(job.job_id)}`, {headers: {'Accept': 'application/json'}, cache: 'no-store'});
+        const result = await readPlanResponse(response, onProgress);
         if (response.status === 202) continue;
-        return readPlanResponse(response);
+        return result;
       }
       throw new Error('Research took too long. Please try a narrower request.');
     }
@@ -1032,29 +1101,27 @@
       chatInput.disabled = true;
       document.querySelector('.chat-send').disabled = true;
       calendarGrid.setAttribute('aria-busy', 'true');
-      const loading = document.createElement('div');
-      loading.className = 'message bot';
-      loading.textContent = activePlan ? 'Rechecking sources and revising your trip…' : 'Browsing current flights, stays and destination sources…';
-      chatMessages.append(loading);
-      chatMessages.scrollTop = chatMessages.scrollHeight;
+      const progress = createProgressCard();
       try {
-        const result = await requestPlan({prompt: pendingRequest ? `${pendingRequest}\nAdditional detail: ${cleanRequest}` : cleanRequest, previous: activePlan});
+        const result = await requestPlan({prompt: pendingRequest ? `${pendingRequest}\nAdditional detail: ${cleanRequest}` : cleanRequest, previous: activePlan}, value => progress.update(value));
         if (result.question) {
           pendingRequest = pendingRequest ? `${pendingRequest}\nAdditional detail: ${cleanRequest}` : cleanRequest;
+          progress.finish('One detail needed');
           addMessage(result.question, 'bot');
         } else {
           activePlan = result;
           pendingRequest = '';
           showPlan(result);
+          progress.finish(result.status === 'partial' ? 'Draft ready — gaps noted' : result.status === 'exploring' ? 'Options ready' : 'Plan ready');
           const selectedFlights = (result.flights || []).filter(item => item.selected).length;
           const selectedStays = (result.lodging || []).filter(item => item.selected).length;
           const calendarNote = result.days.length ? `${result.days.length} calendar days · ${selectedFlights} recommended flight legs · ${selectedStays} recommended stays.` : 'No dated calendar yet; choose the next step below.';
           addMessage(`${result.title} (${result.status})\n${result.summary || ''}\n${calendarNote}\n${result.planning_state.unresolved.join('\n')}\nOpen Budget or Plan details & sources for costs, assumptions and evidence. Nothing has been booked.`, 'bot');
         }
       } catch (error) {
+        progress.finish('No result received');
         addMessage(error.message, 'bot');
       } finally {
-        loading.remove();
         calendarGrid.removeAttribute('aria-busy');
         chatInput.disabled = false;
         document.querySelector('.chat-send').disabled = false;
