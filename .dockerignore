@@ -1,4 +1,7 @@
 *
 !app.py
+!start.sh
+!agent/
+!agent/**
 !docs/
 !docs/trip-calendar.html

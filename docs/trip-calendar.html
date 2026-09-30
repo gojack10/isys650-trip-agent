@@ -278,7 +278,7 @@
     .stay-card { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
     .stay-card strong, .tip-card strong { display: block; font-size: 12px; }
     .stay-card span, .tip-card span { display: block; margin-top: 4px; color: var(--muted); font-size: 11px; line-height: 1.4; }
-    .text-button { border: 0; background: transparent; color: var(--green); padding: 8px 0; cursor: pointer; font-weight: 750; font-size: 12px; white-space: nowrap; }
+    .text-button { border: 0; background: transparent; color: var(--green); padding: 8px 0; cursor: pointer; font-weight: 750; font-size: 12px; white-space: nowrap; text-decoration: none; }
     .stay-actions { display: flex; flex-direction: column; align-items: flex-end; }
     .stay-directions { color: var(--green); font-size: 11px; font-weight: 750; text-decoration: none; white-space: nowrap; }
     .stay-directions:hover { text-decoration: underline; }
@@ -348,9 +348,11 @@
     }
 
     .modal-backdrop.open { display: flex; }
-    .modal { width: min(440px, 100%); padding: 24px; border-radius: 18px; background: var(--paper); box-shadow: 0 24px 80px rgba(0,0,0,.24); }
+    .modal { width: min(600px, 100%); max-height: 90vh; overflow-y: auto; padding: 24px; border-radius: 18px; background: var(--paper); box-shadow: 0 24px 80px rgba(0,0,0,.24); }
     .modal h2 { margin: 0; font-family: Georgia, "Times New Roman", serif; font-weight: 500; }
-    .modal p { color: var(--muted); line-height: 1.55; }
+    .modal p { color: var(--muted); line-height: 1.55; white-space: pre-line; }
+    .modal-links { display: grid; gap: 8px; }
+    .modal-links a { color: var(--green); font-size: 12px; font-weight: 750; }
     .modal-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 20px; }
 
     .toast {
@@ -558,8 +560,8 @@
       <nav class="nav-list">
         <button class="nav-item active"><span class="nav-icon">▦</span>Calendar</button>
         <button class="nav-item explore-trigger"><span class="nav-icon">⌁</span>Explore</button>
-        <button class="nav-item"><span class="nav-icon">⌖</span>Bookings</button>
-        <button class="nav-item"><span class="nav-icon">◎</span>Budget</button>
+        <button class="nav-item bookings-trigger"><span class="nav-icon">⌖</span>Bookings</button>
+        <button class="nav-item budget-trigger"><span class="nav-icon">◎</span>Budget</button>
         <button class="nav-item"><span class="nav-icon">✦</span>Travel notes</button>
       </nav>
       <div class="sidebar-note">No trip yet</div>
@@ -570,6 +572,7 @@
         <div class="trip-heading">
           <h1>Your trip</h1>
           <p id="tripDates">No itinerary yet · Ask Wanderbot to start</p>
+          <button class="text-button" id="planDetails">Plan details &amp; sources</button>
         </div>
         <div class="top-actions">
           <button class="button" id="resetDemo">Reset demo</button>
@@ -614,7 +617,7 @@
                 <span id="stayMeta"></span>
               </div>
               <div class="stay-actions">
-                <button class="text-button" id="stayButton">View stay →</button>
+                <a class="text-button" id="stayButton" href="#">View stay →</a>
                 <a class="stay-directions" id="stayDirections" href="#" target="_blank" rel="noopener noreferrer">Directions ↗</a>
               </div>
             </div>
@@ -638,13 +641,14 @@
   </div>
 
   <nav class="mobile-bar" aria-label="Mobile navigation">
-    <button>▦<br>Calendar</button><button class="explore-trigger">⌁<br>Explore</button><button>⌖<br>Bookings</button><button>◎<br>Budget</button>
+    <button>▦<br>Calendar</button><button class="explore-trigger">⌁<br>Explore</button><button class="bookings-trigger">⌖<br>Bookings</button><button class="budget-trigger">◎<br>Budget</button>
   </nav>
 
   <div class="modal-backdrop" id="modalBackdrop" role="presentation">
     <section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <h2 id="modalTitle">Add an activity</h2>
       <p id="modalText">In the working app, this opens a form for an activity name, time, location, reservation link, and notes.</p>
+      <div class="modal-links" id="modalLinks"></div>
       <div class="modal-actions">
         <button class="button" id="closeModal">Close</button>
         <button class="button primary" id="demoSave">Save example</button>
@@ -728,6 +732,7 @@
     const timeline = document.getElementById('timeline');
     const stayName = document.getElementById('stayName');
     const stayMeta = document.getElementById('stayMeta');
+    const stayButton = document.getElementById('stayButton');
     const stayDirections = document.getElementById('stayDirections');
     const localTip = document.getElementById('localTip');
     const exploreCity = document.getElementById('exploreCity');
@@ -738,6 +743,7 @@
     let generatedDays = {};
     let activePlan = null;
     let pendingRequest = '';
+    let currentStayUrl = '';
 
     const dayLabels = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const colors = { rome: 'var(--rome)', florence: 'var(--florence)', barcelona: 'var(--barcelona)', lisbon: 'var(--lisbon)' };
@@ -792,7 +798,11 @@
       destinationStrip.style.background = colors[info.className];
       stayName.textContent = info.stay[0];
       stayMeta.textContent = info.stay[1];
-      stayDirections.hidden = !!generatedDays;
+      currentStayUrl = info.stayUrl || '';
+      stayButton.href = currentStayUrl || '#';
+      stayButton.target = currentStayUrl ? '_blank' : '';
+      stayButton.rel = currentStayUrl ? 'noopener noreferrer' : '';
+      stayDirections.hidden = info.stay[0] === 'Lodging not selected';
       stayDirections.href = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${info.stay[0]}, ${info.city}`)}`;
       stayDirections.setAttribute('aria-label', `Directions to ${info.stay[0]}, opens in a new tab`);
       localTip.textContent = info.tip;
@@ -818,17 +828,31 @@
     function showPlan(plan) {
       selectedKey = '';
       const cities = [...new Set(plan.days.map(day => day.city))];
-      generatedDays = Object.fromEntries(plan.days.map((day, index) => [day.date, {
-        city: day.city, day: index + 1, className: palette[cities.indexOf(day.city) % palette.length],
-        weather: 'Weather and availability not verified',
-        stay: ['Lodging not selected', 'Check prices and availability before booking'],
-        tip: 'Planning draft only. Verify prices, hours, transport and safety with primary sources.',
-        events: day.activities.map(item => [item.time, item.title, item.notes, item.url])
-      }]));
+      generatedDays = Object.fromEntries(plan.days.map((day, index) => {
+        const stay = (plan.lodging || []).find(item => item.id === day.lodging_id);
+        return [day.date, {
+          city: day.city, day: index + 1, className: palette[cities.indexOf(day.city) % palette.length],
+          weather: 'Live weather is not verified',
+          stay: stay ? [stay.name, `${stay.price || 'Price unavailable'} · ${stay.notes || 'Verify before booking'}`] : ['Lodging not selected', 'Check prices and availability before booking'],
+          stayUrl: stay ? stay.source_url : '',
+          tip: day.local_note || 'Verify changing travel and safety information before departure.',
+          events: day.activities.map(item => [item.time, item.title, item.notes, item.url])
+        }];
+      }));
+      if (!plan.days.length) {
+        document.querySelector('.trip-heading h1').textContent = plan.title;
+        document.getElementById('tripDates').textContent = `${plan.status} · No dated itinerary yet`;
+        document.querySelector('.sidebar-note').textContent = 'Choose the next step with Wanderbot';
+        document.getElementById('legend').replaceChildren();
+        document.querySelector('.detail-panel').hidden = true;
+        document.getElementById('exploreSection').hidden = true;
+        renderCalendar();
+        return;
+      }
       const [year, month, date] = plan.days[0].date.split('-').map(Number);
       currentMonth = new Date(year, month - 1, 1);
       document.querySelector('.trip-heading h1').textContent = plan.title;
-      document.getElementById('tripDates').textContent = `${plan.days[0].date} – ${plan.days[plan.days.length - 1].date} · ${plan.days.length}-day AI draft, no bookings`;
+      document.getElementById('tripDates').textContent = `${plan.days[0].date} – ${plan.days[plan.days.length - 1].date} · ${plan.days.length}-day ${plan.status} draft, no bookings`;
       document.querySelector('.sidebar-note').textContent = `${plan.days.length}-day draft · ${cities.join(' · ')}`;
       document.getElementById('legend').innerHTML = cities.map((city, index) => `<span class="legend-item"><span class="legend-dot" style="background:${colors[palette[index % palette.length]]}"></span>${escapeHtml(city)}</span>`).join('');
       document.querySelector('.detail-panel').hidden = false;
@@ -838,10 +862,19 @@
     const modalBackdrop = document.getElementById('modalBackdrop');
     const modalTitle = document.getElementById('modalTitle');
     const modalText = document.getElementById('modalText');
+    const modalLinks = document.getElementById('modalLinks');
 
-    function openModal(title, text, showSave = false) {
+    function openModal(title, text, showSave = false, links = []) {
       modalTitle.textContent = title;
       modalText.textContent = text;
+      modalLinks.replaceChildren(...links.map(link => {
+        const anchor = document.createElement('a');
+        anchor.href = link.url;
+        anchor.textContent = `${link.label} ↗`;
+        anchor.target = '_blank';
+        anchor.rel = 'noopener noreferrer';
+        return anchor;
+      }));
       document.getElementById('demoSave').style.display = showSave ? '' : 'none';
       modalBackdrop.classList.add('open');
       document.getElementById('closeModal').focus();
@@ -851,7 +884,54 @@
 
     document.getElementById('addButton').addEventListener('click', () => openModal('Add an activity', 'In the working app, this opens a form for an activity name, time, location, reservation link, and notes.', true));
     document.getElementById('shareButton').addEventListener('click', () => openModal('Share this trip', 'Invite travel companions or copy a view-only link. This wireframe does not send anything yet.'));
-    document.getElementById('stayButton').addEventListener('click', () => openModal(stayName.textContent, `${stayMeta.textContent}. A working version would show the address, confirmation number, check-in instructions, and booking link.`));
+    document.getElementById('stayButton').addEventListener('click', event => {
+      if (currentStayUrl) return;
+      event.preventDefault();
+      openModal(stayName.textContent, stayMeta.textContent);
+    });
+
+    function openBookings() {
+      const flights = (activePlan?.flights || []).filter(item => item.selected);
+      const stays = (activePlan?.lodging || []).filter(item => item.selected);
+      const lines = [
+        ...flights.map(item => `${item.date} · ${item.airline}: ${item.origin} → ${item.destination}\n${item.departure}–${item.arrival} · ${item.price}`),
+        ...stays.map(item => `${item.name}, ${item.city}\n${item.check_in}–${item.check_out} · ${item.price}`)
+      ];
+      const links = [
+        ...flights.filter(item => item.source_url).map(item => ({label: `${item.airline} flight source`, url: item.source_url})),
+        ...stays.filter(item => item.source_url).map(item => ({label: `${item.name} source`, url: item.source_url}))
+      ];
+      openModal('Recommended travel — not booked', lines.join('\n\n') || 'No flight or lodging has been recommended yet.', false, links);
+    }
+    document.querySelectorAll('.bookings-trigger').forEach(button => button.addEventListener('click', openBookings));
+
+    function openBudget() {
+      const budget = activePlan?.budget;
+      if (!budget) return openModal('Budget', 'No reliable budget yet. See plan details for assumptions and missing information.');
+      const money = value => value == null ? 'Unknown' : `${budget.currency} ${value.toFixed(2)}`;
+      const rows = budget.items.map(item => `${item.category}: ${money(item.total)} (${item.price_status})\n${item.description}`);
+      rows.push(`Subtotal: ${money(budget.subtotal)}\nContingency: ${money(budget.contingency)}\nTotal: ${money(budget.total)}\nSavings target: ${money(budget.target)}`);
+      if (budget.savings) rows.push(`Current savings: ${money(budget.savings.current_savings)}\n${budget.savings.contributions} contributions of ${money(budget.savings.monthly)}`);
+      rows.push(...budget.variants, budget.notes);
+      openModal('Whole-party budget', rows.join('\n\n'), false, budget.items.filter(item => item.source_url).map(item => ({label: item.description, url: item.source_url})));
+    }
+    document.querySelectorAll('.budget-trigger').forEach(button => button.addEventListener('click', openBudget));
+
+    function openPlanDetails() {
+      if (!activePlan) return openModal('Plan details', 'Ask Wanderbot to plan a trip or suggest destinations for your budget.');
+      const state = activePlan.planning_state;
+      const sections = [activePlan.summary];
+      for (const [label, values] of [['Confirmed', state.confirmed], ['Assumptions', state.assumptions], ['Open choices', state.unresolved], ['Limitations', activePlan.limitations]]) {
+        if (values.length) sections.push(`${label}\n${values.join('\n')}`);
+      }
+      sections.push(...activePlan.reservations.map(item => `${item.title}\n${item.notes}`));
+      const links = [
+        ...activePlan.sources.filter(item => item.url).map(item => ({label: `${item.title} · ${item.confidence} confidence · ${item.checked_at || 'not verified'} · ${item.notes}`, url: item.url})),
+        ...activePlan.reservations.filter(item => item.url).map(item => ({label: item.title, url: item.url}))
+      ];
+      openModal(`Plan details · ${activePlan.status}`, sections.join('\n\n'), false, links);
+    }
+    document.getElementById('planDetails').addEventListener('click', openPlanDetails);
     document.getElementById('closeModal').addEventListener('click', closeModal);
     modalBackdrop.addEventListener('click', event => { if (event.target === modalBackdrop) closeModal(); });
     document.addEventListener('keydown', event => { if (event.key === 'Escape') closeModal(); });
@@ -872,7 +952,7 @@
       renderCalendar();
     });
 
-    document.querySelectorAll('.nav-item:not(.active):not(.explore-trigger), .mobile-bar button:not(.explore-trigger)').forEach(button => {
+    document.querySelectorAll('.nav-item:not(.active):not(.explore-trigger):not(.bookings-trigger):not(.budget-trigger), .mobile-bar button:not(.explore-trigger):not(.bookings-trigger):not(.budget-trigger)' ).forEach(button => {
       button.addEventListener('click', () => {
         const toast = document.getElementById('toast');
         toast.textContent = `${button.textContent.trim()} is planned for a later checkpoint`;
@@ -925,6 +1005,25 @@
       return result;
     }
 
+    async function requestPlan(payload) {
+      const started = await fetch('/api/plan', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+        cache: 'no-store',
+        body: JSON.stringify(payload)
+      });
+      const job = await readPlanResponse(started);
+      if (started.status !== 202 || !job.job_id) return job;
+      const deadline = Date.now() + 8 * 60 * 1000;
+      while (Date.now() < deadline) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        const response = await fetch(`/api/plan/${encodeURIComponent(job.job_id)}`, {headers: {'Accept': 'application/json'}, cache: 'no-store'});
+        if (response.status === 202) continue;
+        return readPlanResponse(response);
+      }
+      throw new Error('Research took too long. Please try a narrower request.');
+    }
+
     async function submitChat(request) {
       const cleanRequest = request.trim();
       if (!cleanRequest) return;
@@ -935,17 +1034,11 @@
       calendarGrid.setAttribute('aria-busy', 'true');
       const loading = document.createElement('div');
       loading.className = 'message bot';
-      loading.textContent = activePlan ? 'Refreshing your trip with the new details…' : 'Researching and planning…';
+      loading.textContent = activePlan ? 'Rechecking sources and revising your trip…' : 'Browsing current flights, stays and destination sources…';
       chatMessages.append(loading);
       chatMessages.scrollTop = chatMessages.scrollHeight;
       try {
-        const response = await fetch('/api/plan', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
-          cache: 'no-store',
-          body: JSON.stringify({prompt: pendingRequest ? `${pendingRequest}\nAdditional detail: ${cleanRequest}` : cleanRequest, previous: activePlan})
-        });
-        const result = await readPlanResponse(response);
+        const result = await requestPlan({prompt: pendingRequest ? `${pendingRequest}\nAdditional detail: ${cleanRequest}` : cleanRequest, previous: activePlan});
         if (result.question) {
           pendingRequest = pendingRequest ? `${pendingRequest}\nAdditional detail: ${cleanRequest}` : cleanRequest;
           addMessage(result.question, 'bot');
@@ -953,7 +1046,10 @@
           activePlan = result;
           pendingRequest = '';
           showPlan(result);
-          addMessage(`${result.title}\n${result.summary || ''}\nThe ${result.days.length}-day draft is on the calendar. You can keep revising this trip, or use Reset demo to start over. Prices, hours and availability are unverified; check the linked sources.`, 'bot');
+          const selectedFlights = (result.flights || []).filter(item => item.selected).length;
+          const selectedStays = (result.lodging || []).filter(item => item.selected).length;
+          const calendarNote = result.days.length ? `${result.days.length} calendar days · ${selectedFlights} recommended flight legs · ${selectedStays} recommended stays.` : 'No dated calendar yet; choose the next step below.';
+          addMessage(`${result.title} (${result.status})\n${result.summary || ''}\n${calendarNote}\n${result.planning_state.unresolved.join('\n')}\nOpen Budget or Plan details & sources for costs, assumptions and evidence. Nothing has been booked.`, 'bot');
         }
       } catch (error) {
         addMessage(error.message, 'bot');

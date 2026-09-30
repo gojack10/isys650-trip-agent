@@ -8,7 +8,7 @@ The draft targets the course assignment over the next few weeks by demonstrating
 
 ## Current status
 
-**Working code-first demo.** [Wanderplan](https://isys650.10server.net/) starts with an empty calendar. Ask Wanderbot uses OpenRouter web search to draft the requested itinerary for trips of up to 30 consecutive days and accepts continued revisions to the current plan; Reset demo clears the plan and chat. It is a rough planning demo, not a booking service. The old blank Langflow export in `flows/trip-agent.json` is historical, not the runtime.
+**Browser-agent candidate, not yet deployed.** The working tree replaces the existing OpenRouter web-search demo with Pi + Browser Harness + headless Chromium. It supports dated itineraries (up to 30 days), budget-first exploration without fabricated dates, and revisions. The UI displays recommended flights/stays, budgets, assumptions, reservations and sources. Research runs asynchronously one job at a time. [Production Wanderplan](https://isys650.10server.net/) remains on the previous deployment until an explicit deployment. Nothing books travel; the blank Langflow export is historical.
 
 ## Prompting skill
 
@@ -18,8 +18,8 @@ Zack's first prompting checkpoint is documented in [`docs/prompting-checkpoint.m
 
 `skills/travel-browser-research/` contains the first data-and-tooling checkpoint: a Browser Harness workflow for researching an already-defined trip. It discovers candidates, verifies prices and restrictions on primary sources, and returns structured, source-backed data for the itinerary agent.
 
-The skill is a research workflow and is not yet wired into the deployed app. OpenRouter web search supplies discovery snippets instead; the app does not independently verify each result on a primary site. It does not book travel, enter credentials, or guarantee prices and availability.
+The candidate encodes Jesus's research and Zack's planning requirements into one explicit operating procedure, rather than concatenating competing skills into a user message. Selected SiftText browser nodes are exported ahead of time through the CLI as faithful Markdown snapshots, with a separate pinned-runtime compatibility adapter. The generated system prompt is preloaded; no SiftText access or credentials are needed at runtime. See [`agent/README.md`](agent/README.md) for preparation commands, requirement mapping, branch walkthroughs and verification limits.
 
-Every push to `main` runs [tests and deploys](.github/workflows/deploy.yml) the Docker app on 10server.net. The server calls `deepseek/deepseek-v4.1-flash` through OpenRouter with high reasoning and its web-search plugin; no `max_tokens` value is set. The key lives only on the server. The public demo has no password or app-side request limit: anyone can spend the server's OpenRouter key. Use a dedicated spend-capped provider key before sharing broadly. Don't use it for bookings or trust changing prices without checking linked sources. Browser Harness is **not** yet connected to the deployed agent.
+Every push to `main` runs [tests and deploys](.github/workflows/deploy.yml) the Docker app on 10server.net; do not push an unreviewed candidate. Pi uses `deepseek/deepseek-v4.1-flash` through OpenRouter. One-job serialization is not a security boundary: the public endpoint, agent-readable provider key and unrestricted shell/browser egress still require deployment hardening. Prompt instructions do not protect secrets or private networks. Use a dedicated spend-capped key for authorized isolated tests.
 
 Run tests locally with `uv run --no-project python -m unittest discover -s tests`. Repository commit conventions are in [`AGENTS.md`](AGENTS.md).
